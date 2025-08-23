@@ -11,6 +11,9 @@ const recentDataList = document.getElementById("recent-cities");
 // ----- Storage keys -----
 const RECENTS_KEY = "weather.recents.v1";
 
+// ----- Motion preference -----
+const prefersReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 // ----- Helpers -----
 function setStatus(msg) { statusEl.textContent = msg; }
 function clearStatus() { statusEl.textContent = ""; }
@@ -53,81 +56,123 @@ function weatherText(code) {
   return map[code] || "Cloudy";
 }
 
-// ----- Animated SVG icons (small, classy, no libs) -----
-function createWeatherIcon(group) {
-  const span = document.createElement("span");
-  span.className = "wx-ico " + ({
-    clear:"ic-sun", clouds:"ic-cloud", rain:"ic-rain", snow:"ic-snow", thunder:"ic-thunder", wind:"ic-wind"
-  }[group] || "ic-cloud");
-
-  // SVGs are sized via CSS (28x28)
-  const svg =
-    group === "clear" ? `
-      <svg viewBox="0 0 28 28" aria-label="Sunny">
-        <circle cx="14" cy="14" r="5" fill="#FDB813"/>
-        <g class="rays" stroke="#FDB813" stroke-width="2" stroke-linecap="round">
-          <line x1="14" y1="2"  x2="14" y2="6"/>
-          <line x1="14" y1="22" x2="14" y2="26"/>
-          <line x1="2"  y1="14" x2="6"  y2="14"/>
-          <line x1="22" y1="14" x2="26" y2="14"/>
-          <line x1="6"  y1="6"  x2="9"  y2="9"/>
-          <line x1="19" y1="19" x2="22" y2="22"/>
-          <line x1="19" y1="9"  x2="22" y2="6"/>
-          <line x1="6"  y1="22" x2="9"  y2="19"/>
-        </g>
-      </svg>`
-    : group === "clouds" ? `
-      <svg viewBox="0 0 28 28" aria-label="Cloudy" class="ic-cloud">
-        <g class="cloud" fill="#C8D2E1">
-          <circle cx="10" cy="13" r="5"/>
-          <circle cx="15" cy="11" r="6"/>
-          <rect x="6" y="13" width="16" height="6" rx="3"/>
-        </g>
-      </svg>`
-    : group === "rain" ? `
-      <svg viewBox="0 0 28 28" aria-label="Rainy" class="ic-rain">
-        <g class="cloud" fill="#C8D2E1">
-          <circle cx="10" cy="11" r="5"/>
-          <circle cx="15" cy="9" r="6"/>
-          <rect x="6" y="11" width="16" height="6" rx="3"/>
-        </g>
-        <g stroke="#5A8DEE" stroke-width="2" stroke-linecap="round" opacity=".9">
-          <line class="drop d1" x1="10" y1="18" x2="10" y2="24"/>
-          <line class="drop d2" x1="14" y1="18" x2="14" y2="24"/>
-          <line class="drop d3" x1="18" y1="18" x2="18" y2="24"/>
-        </g>
-      </svg>`
-    : group === "snow" ? `
-      <svg viewBox="0 0 28 28" aria-label="Snowy" class="ic-snow">
-        <g class="cloud" fill="#C8D2E1">
-          <circle cx="10" cy="11" r="5"/>
-          <circle cx="15" cy="9" r="6"/>
-          <rect x="6" y="11" width="16" height="6" rx="3"/>
-        </g>
-        <g fill="#FFFFFF">
-          <circle class="flake f1" cx="10" cy="20" r="1.2"/>
-          <circle class="flake f2" cx="14" cy="20" r="1.2"/>
-          <circle class="flake f3" cx="18" cy="20" r="1.2"/>
-        </g>
-      </svg>`
-    : group === "thunder" ? `
-      <svg viewBox="0 0 28 28" aria-label="Thunderstorm" class="ic-thunder">
-        <g class="cloud" fill="#B5B1D8">
-          <circle cx="10" cy="11" r="5"/>
-          <circle cx="15" cy="9" r="6"/>
-          <rect x="6" y="11" width="16" height="6" rx="3"/>
-        </g>
-        <polygon class="bolt" points="13,13 11,20 15,20 13,26 19,17 15,17 17,13" fill="#F8E71C" opacity=".85"/>
-      </svg>`
-    : /* wind */ `
-      <svg viewBox="0 0 28 28" aria-label="Windy" class="ic-wind">
-        <path class="stream" d="M4 12 C10 10, 14 10, 22 12" fill="none" stroke="#9AA7B7" stroke-width="2" stroke-linecap="round"/>
-        <path class="stream" d="M6 16 C12 14, 16 14, 24 16" fill="none" stroke="#9AA7B7" stroke-width="2" stroke-linecap="round"/>
-      </svg>`;
-
-  span.innerHTML = svg;
-  return span;
-}
+// ----- Minimal embedded Lottie animations (SVG renderer) -----
+// Small, tasteful motion: sun pulse, cloud drift, rain drops, snow flakes, bolt flash.
+// All are 200x120 canvas, 2-second loops (120 frames @ 60fps).
+const LOT = {
+  clear: {
+    v:"5.7.6",fr:60,ip:0,op:120,w:200,h:120,nm:"sun-pulse",ddd:0,assets:[],
+    layers:[
+      {ddd:0,ind:1,ty:4,nm:"sun",sr:1,ks:{o:{a:0,k:100},r:{a:0,k:0},p:{a:0,k:[100,60,0]},a:{a:0,k:[0,0,0]},
+       s:{a:1,k:[{t:0,s:[100,100,100]},{t:60,s:[108,108,100]},{t:120,s:[100,100,100]}]}},
+       shapes:[
+        {ty:"gr",it:[
+          {ty:"el",p:{a:0,k:[0,0]},s:{a:0,k:[52,52]},d:1},
+          {ty:"fl",c:{a:0,k:[1,0.72,0,1]},o:{a:0,k:100}},
+          {ty:"tr",p:{a:0,k:[0,0]},a:{a:0,k:[0,0]},s:{a:0,k:[100,100]},r:{a:0,k:0},o:{a:0,k:100}}
+        ]}
+       ],ip:0,op:120,st:0,bm:0
+      }
+    ]
+  },
+  clouds: {
+    v:"5.7.6",fr:60,ip:0,op:120,w:200,h:120,nm:"cloud-drift",ddd:0,assets:[],
+    layers:[
+      {ddd:0,ind:1,ty:4,nm:"cloud",sr:1,ks:{o:{a:0,k:100},r:{a:0,k:0},
+        p:{a:1,k:[{t:0,s:[100,60,0]},{t:60,s:[110,60,0]},{t:120,s:[100,60,0]}]},
+        a:{a:0,k:[0,0,0]},s:{a:0,k:[100,100,100]}},
+       shapes:[
+        {ty:"gr",it:[
+          {ty:"el",p:{a:0,k:[-20,0]},s:{a:0,k:[50,35]}},
+          {ty:"el",p:{a:0,k:[10,-8]},s:{a:0,k:[60,40]}},
+          {ty:"rc",p:{a:0,k:[0,8]},s:{a:0,k:[90,30]},r:{a:0,k:15}},
+          {ty:"fl",c:{a:0,k:[0.78,0.82,0.88,1]},o:{a:0,k:100}},
+          {ty:"tr",p:{a:0,k:[0,0]}}
+        ]}
+       ],ip:0,op:120,st:0,bm:0
+      }
+    ]
+  },
+  rain: {
+    v:"5.7.6",fr:60,ip:0,op:120,w:200,h:120,nm:"rain",ddd:0,assets:[],
+    layers:[
+      // cloud
+      {ddd:0,ind:1,ty:4,nm:"cloud",sr:1,ks:{o:{a:0,k:100},r:{a:0,k:0},p:{a:0,k:[100,50,0]},a:{a:0,k:[0,0,0]},s:{a:0,k:[100,100,100]}},
+       shapes:[{ty:"gr",it:[
+         {ty:"el",p:{a:0,k:[-20,0]},s:{a:0,k:[50,35]}},
+         {ty:"el",p:{a:0,k:[10,-8]},s:{a:0,k:[60,40]}},
+         {ty:"rc",p:{a:0,k:[0,8]},s:{a:0,k:[90,30]},r:{a:0,k:15}},
+         {ty:"fl",c:{a:0,k:[0.78,0.82,0.88,1]},o:{a:0,k:100}},
+         {ty:"tr",p:{a:0,k:[0,0]}}
+       ]}]},
+      // drops
+      ...[70,100,130].map((x,i)=>({
+        ddd:0,ind:10+i,ty:4,nm:"drop"+i,sr:1,
+        ks:{o:{a:0,k:100},r:{a:0,k:0},
+          p:{a:1,k:[{t:0,s:[x,70,0]},{t:90,s:[x,100,0]}]},
+          a:{a:0,k:[0,0,0]},s:{a:0,k:[100,100,100]}},
+        shapes:[{ty:"gr",it:[
+          {ty:"rc",p:{a:0,k:[0,0]},s:{a:0,k:[4,14]},r:{a:0,k:2}},
+          {ty:"fl",c:{a:0,k:[0.35,0.55,0.93,1]},o:{a:0,k:100}},
+          {ty:"tr",p:{a:0,k:[0,0]}}
+        ]}],
+        ip:20*i,op:120,st:0,bm:0
+      }))
+    ]
+  },
+  snow: {
+    v:"5.7.6",fr:60,ip:0,op:120,w:200,h:120,nm:"snow",ddd:0,assets:[],
+    layers:[
+      // cloud
+      {ddd:0,ind:1,ty:4,nm:"cloud",sr:1,ks:{o:{a:0,k:100},r:{a:0,k:0},p:{a:0,k:[100,50,0]},a:{a:0,k:[0,0,0]},s:{a:0,k:[100,100,100]}},
+       shapes:[{ty:"gr",it:[
+         {ty:"el",p:{a:0,k:[-20,0]},s:{a:0,k:[50,35]}},
+         {ty:"el",p:{a:0,k:[10,-8]},s:{a:0,k:[60,40]}},
+         {ty:"rc",p:{a:0,k:[0,8]},s:{a:0,k:[90,30]},r:{a:0,k:15}},
+         {ty:"fl",c:{a:0,k:[0.78,0.82,0.88,1]},o:{a:0,k:100}},
+         {ty:"tr",p:{a:0,k:[0,0]}}
+       ]}]},
+      // flakes
+      ...[70,100,130].map((x,i)=>({
+        ddd:0,ind:10+i,ty:4,nm:"flake"+i,sr:1,
+        ks:{o:{a:1,k:[{t:0,s:0},{t:10,s:100},{t:100,s:0}]},r:{a:0,k:0},
+          p:{a:1,k:[{t:0,s:[x,70,0]},{t:100,s:[x+5,100,0]}]},
+          a:{a:0,k:[0,0,0]},s:{a:0,k:[100,100,100]}},
+        shapes:[{ty:"gr",it:[
+          {ty:"el",p:{a:0,k:[0,0]},s:{a:0,k:[6,6]}},
+          {ty:"fl",c:{a:0,k:[1,1,1,1]},o:{a:0,k:100}},
+          {ty:"tr",p:{a:0,k:[0,0]}}
+        ]}],
+        ip:20*i,op:120,st:0,bm:0
+      }))
+    ]
+  },
+  thunder: {
+    v:"5.7.6",fr:60,ip:0,op:120,w:200,h:120,nm:"thunder",ddd:0,assets:[],
+    layers:[
+      // cloud
+      {ddd:0,ind:1,ty:4,nm:"cloud",sr:1,ks:{o:{a:0,k:100},r:{a:0,k:0},p:{a:0,k:[100,50,0]},a:{a:0,k:[0,0,0]},s:{a:0,k:[100,100,100]}},
+       shapes:[{ty:"gr",it:[
+         {ty:"el",p:{a:0,k:[-20,0]},s:{a:0,k:[50,35]}},
+         {ty:"el",p:{a:0,k:[10,-8]},s:{a:0,k:[60,40]}},
+         {ty:"rc",p:{a:0,k:[0,8]},s:{a:0,k:[90,30]},r:{a:0,k:15}},
+         {ty:"fl",c:{a:0,k:[0.71,0.69,0.85,1]},o:{a:0,k:100}},
+         {ty:"tr",p:{a:0,k:[0,0]}}
+       ]}]},
+      // bolt flash
+      {ddd:0,ind:3,ty:4,nm:"bolt",sr:1,
+       ks:{o:{a:1,k:[{t:0,s:0},{t:90,s:0},{t:95,s:100},{t:105,s:40},{t:120,s:0}]},
+           r:{a:0,k:0},p:{a:0,k:[120,85,0]},a:{a:0,k:[0,0,0]},s:{a:0,k:[100,100,100]}},
+       shapes:[{ty:"gr",it:[
+         {ty:"sh",ks:{a:0,k:{i:[],o:[],v:[[0,-10],[-6,8],[4,8],[-2,26],[8,10],[0,10]],c:true}}},
+         {ty:"fl",c:{a:0,k:[0.97,0.91,0.11,1]},o:{a:0,k:100}},
+         {ty:"tr",p:{a:0,k:[0,0]}}
+       ]}],ip:0,op:120,st:0,bm:0}
+    ]
+  }
+};
+// Use clouds for "wind" as a fallback
+LOT.wind = LOT.clouds;
 
 // ----- Recents -----
 let recents = safeLoad(RECENTS_KEY, []); // {name,country,admin1,latitude,longitude}
@@ -157,24 +202,22 @@ function updateRecentUI() {
 updateRecentUI();
 
 // ----- Compare model (max 3) -----
-let compare = []; // { key, loc, data }
+let compare = []; // { key, loc, data, anim? }
 
 function renderTable() {
   table.style.setProperty("--cols", String(compare.length));
   table.innerHTML = "";
 
   if (compare.length === 0) {
-    const row = document.createElement("div");
-    row.className = "wx-row";
-    const cell = document.createElement("div");
-    cell.className = "wx-cell";
+    const row = document.createElement("div"); row.className = "wx-row";
+    const cell = document.createElement("div"); cell.className = "wx-cell";
     cell.style.gridColumn = `1 / span ${1 + compare.length}`;
     cell.textContent = "Add up to 3 locations to compare.";
     table.append(row, cell);
     return;
   }
 
-  function addRow(label, getVal, bgClassForCol = null, header = false) {
+  function addRow(label, getVal, header = false) {
     const row = document.createElement("div");
     row.className = "wx-row" + (header ? " wx-header" : "");
 
@@ -186,63 +229,74 @@ function renderTable() {
 
     compare.forEach((entry) => {
       const cell = document.createElement("div");
-      cell.className = "wx-cell" + (bgClassForCol ? ` ${bgClassForCol(entry)}` : "");
+      cell.className = "wx-cell";
       cell.setAttribute("role", header ? "columnheader" : "cell");
 
-      const content = document.createElement("div");
-      content.className = "wx-cell-inner";
-
-      const val = getVal(entry);
-      if (val instanceof Node) content.appendChild(val);
-      else content.textContent = val;
-
-      cell.appendChild(content);
+      const content = getVal(entry);
+      if (content instanceof Node) cell.appendChild(content); else cell.textContent = content;
       row.appendChild(cell);
     });
 
     table.appendChild(row);
   }
 
-  // Header row: icon + location + remove button
+  // Header row: Lottie (top) + name/remove (bottom)
   addRow("Metric", (entry) => {
     const wrap = document.createElement("div");
-    wrap.className = "wx-colhead";
+    wrap.className = "wx-head";
 
-    const left = document.createElement("span");
-    const g = weatherGroup(entry.data.current_weather.weathercode);
-    const icon = createWeatherIcon(g);
-    left.appendChild(icon);
-    left.appendChild(document.createTextNode(placeText(entry.loc)));
+    // Animation box
+    const animBox = document.createElement("div");
+    animBox.className = "wx-animbox";
 
+    // Label bar
+    const bar = document.createElement("div");
+    bar.className = "wx-headbar";
+    bar.textContent = placeText(entry.loc);
     const btn = document.createElement("button");
     btn.className = "remove"; btn.title = "Remove";
     btn.setAttribute("aria-label", `Remove ${placeText(entry.loc)} from comparison`);
     btn.textContent = "×";
     btn.addEventListener("click", () => removeFromCompare(entry.key));
+    bar.appendChild(btn);
 
-    wrap.append(left, btn);
+    wrap.append(animBox, bar);
+
+    // Start / refresh Lottie
+    const g = weatherGroup(entry.data.current_weather.weathercode);
+    const data = LOT[g] || LOT.clouds;
+
+    if (entry.anim && entry.anim.destroy) entry.anim.destroy();
+    entry.anim = !prefersReduced && lottie
+      ? lottie.loadAnimation({
+          container: animBox,
+          renderer: "svg",
+          loop: true,
+          autoplay: true,
+          animationData: data
+        })
+      : null;
+
     return wrap;
-  }, (entry) => `bg-${weatherGroup(entry.data.current_weather.weathercode)}`, true);
+  }, true);
 
-  // Data rows
-  addRow("Condition", (e) => weatherText(e.data.current_weather.weathercode),
-         (e) => `bg-${weatherGroup(e.data.current_weather.weathercode)}`);
-  addRow("Temperature now", (e) => `${Math.round(e.data.current_weather.temperature)}°C`,
-         (e) => `bg-${weatherGroup(e.data.current_weather.weathercode)}`);
-  addRow("Min today", (e) => `${Math.round(e.data.daily.temperature_2m_min[0])}°C`,
-         (e) => `bg-${weatherGroup(e.data.current_weather.weathercode)}`);
-  addRow("Max today", (e) => `${Math.round(e.data.daily.temperature_2m_max[0])}°C`,
-         (e) => `bg-${weatherGroup(e.data.current_weather.weathercode)}`);
-  addRow("Wind now", (e) => `${Math.round(e.data.current_weather.windspeed)} km/h`,
-         (e) => `bg-${weatherGroup(e.data.current_weather.weathercode)}`);
-  addRow("Rain today", (e) => `${Math.round((e.data.daily.precipitation_sum[0] || 0) * 10) / 10} mm`,
-         (e) => `bg-${weatherGroup(e.data.current_weather.weathercode)}`);
-  addRow("Local time", (e) => new Date(e.data.current_weather.time).toLocaleString(),
-         (e) => `bg-${weatherGroup(e.data.current_weather.weathercode)}`);
+  // Data rows (no animation/tint here)
+  addRow("Condition", (e) => weatherText(e.data.current_weather.weathercode));
+  addRow("Temperature now", (e) => `${Math.round(e.data.current_weather.temperature)}°C`);
+  addRow("Min today", (e) => `${Math.round(e.data.daily.temperature_2m_min[0])}°C`);
+  addRow("Max today", (e) => `${Math.round(e.data.daily.temperature_2m_max[0])}°C`);
+  addRow("Wind now", (e) => `${Math.round(e.data.current_weather.windspeed)} km/h`);
+  addRow("Rain today", (e) => `${Math.round((e.data.daily.precipitation_sum[0] || 0) * 10) / 10} mm`);
+  addRow("Local time", (e) => new Date(e.data.current_weather.time).toLocaleString());
 }
 
 function removeFromCompare(key) {
-  compare = compare.filter(e => e.key !== key);
+  // Clean up lotties for the removed column
+  const idx = compare.findIndex(e => e.key === key);
+  if (idx !== -1 && compare[idx].anim && compare[idx].anim.destroy) {
+    compare[idx].anim.destroy();
+  }
+  compare.splice(idx, 1);
   renderTable();
 }
 
@@ -253,7 +307,7 @@ async function addToCompareFlow(loc) {
     const data = await fetchWeather(loc.latitude, loc.longitude);
     const key = locKey(loc);
     if (compare.some(e => e.key === key)) { setStatus("That place is already in the comparison."); return; }
-    compare.push({ key, loc, data });
+    compare.push({ key, loc, data, anim: null });
     addRecent(loc);
     renderTable();
     clearStatus();
@@ -325,7 +379,8 @@ useLocBtn.addEventListener("click", () => {
 });
 
 clearAllBtn.addEventListener("click", () => {
-  if (compare.length === 0) return;
+  // Destroy all animations
+  compare.forEach(e => e.anim && e.anim.destroy && e.anim.destroy());
   compare = [];
   renderTable();
   setStatus("Cleared all compared places.");

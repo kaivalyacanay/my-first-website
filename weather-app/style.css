@@ -4,7 +4,7 @@ body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial
 .container { max-width: 1100px; margin: 48px auto; padding: 0 16px; }
 h1 { margin: 0 0 16px; }
 
-/* Form: input + 3 buttons */
+/* Form */
 form { display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px; margin-bottom: 12px; }
 input { padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); }
 button { padding: 10px 14px; border: 0; border-radius: var(--radius); background: #111; color: #fff; cursor: pointer; }
@@ -20,7 +20,7 @@ button { padding: 10px 14px; border: 0; border-radius: var(--radius); background
 /* Table-like grid */
 .wx-wrap { position: relative; }
 .wx-table {
-  --cols: 0; /* set dynamically: number of location columns */
+  --cols: 0;
   display: grid;
   grid-template-columns: 170px repeat(var(--cols), 1fr);
   border: 1px solid var(--border);
@@ -40,53 +40,27 @@ button { padding: 10px 14px; border: 0; border-radius: var(--radius); background
 .wx-cell:last-child { border-right: 0; }
 
 .wx-label { background: #f8f8f8; font-weight: 600; color: #333; }
-.wx-header .wx-cell { font-weight: 700; }
-.wx-colhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+/* Header cells: taller, host the Lottie animation box */
+.wx-header .wx-cell { padding: 0; min-height: 160px; }
+.wx-head {
+  display: grid;
+  grid-template-rows: 120px auto;
+  height: 100%;
+}
+.wx-animbox {
+  height: 120px; width: 100%;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, rgba(200,210,225,.20), transparent);
+}
+.wx-headbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 8px 12px;
+  font-weight: 700;
+}
 .remove {
   background: transparent; color: inherit; border: 1px solid var(--border);
   border-radius: 999px; width: 28px; height: 28px; line-height: 26px; text-align: center; cursor: pointer;
-}
-
-/* Weather-tinted backgrounds (calm, readable) */
-.bg-clear   { background: linear-gradient(180deg, rgba(255,230,120,.25), transparent); }
-.bg-clouds  { background: linear-gradient(180deg, rgba(200,210,225,.25), transparent); }
-.bg-rain    { background: linear-gradient(180deg, rgba(150,190,255,.22), transparent); }
-.bg-snow    { background: linear-gradient(180deg, rgba(230,240,255,.28), transparent); }
-.bg-thunder { background: linear-gradient(180deg, rgba(190,180,230,.22), transparent); }
-.bg-wind    { background: linear-gradient(180deg, rgba(210,220,230,.22), transparent); }
-
-/* Animated weather icons (inline SVG) */
-.wx-ico { width: 28px; height: 28px; margin-right: 8px; display: inline-flex; align-items: center; justify-content: center; }
-.wx-ico svg { width: 28px; height: 28px; overflow: visible; }
-
-/* Motion: subtle and classy */
-@keyframes spin-slow { to { transform: rotate(1turn); } }
-@keyframes drift-slow { from { transform: translateX(-1px); } to { transform: translateX(1px); } }
-@keyframes drop { 0% { transform: translateY(-2px); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(10px); opacity: 0; } }
-@keyframes flake { 0% { transform: translateY(-2px) translateX(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(10px) translateX(2px); opacity: 0; } }
-@keyframes flash { 0%, 88%, 100% { opacity: .2; } 90% { opacity: 1; } 95% { opacity: .4; } }
-@keyframes dash { from { stroke-dashoffset: 40; } to { stroke-dashoffset: 0; } }
-
-/* Per-icon part animations */
-.ic-sun .rays { animation: spin-slow 24s linear infinite; transform-origin: center; transform-box: fill-box; }
-.ic-cloud .cloud { animation: drift-slow 6s ease-in-out infinite alternate; transform-box: fill-box; }
-.ic-rain .drop { animation: drop 1.6s linear infinite; }
-.ic-rain .d2 { animation-delay: .35s; }
-.ic-rain .d3 { animation-delay: .7s; }
-.ic-snow .flake { animation: flake 2.2s linear infinite; }
-.ic-snow .f2 { animation-delay: .4s; }
-.ic-snow .f3 { animation-delay: .8s; }
-.ic-thunder .bolt { animation: flash 4.5s ease-in-out infinite; }
-.ic-wind .stream { stroke-dasharray: 20 20; animation: dash 3.8s ease-in-out infinite alternate; }
-
-/* Respect reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .ic-sun .rays,
-  .ic-cloud .cloud,
-  .ic-rain .drop,
-  .ic-snow .flake,
-  .ic-thunder .bolt,
-  .ic-wind .stream { animation: none !important; }
 }
 
 /* Responsive */
@@ -97,7 +71,7 @@ button { padding: 10px 14px; border: 0; border-radius: var(--radius); background
   .container { margin: 24px auto; }
   form { grid-template-columns: 1fr; }
   .wx-table { overflow: auto; display: block; }
-  .wx-row { display: grid; grid-template-columns: 140px repeat(var(--cols), 220px); }
+  .wx-row { display: grid; grid-template-columns: 140px repeat(var(--cols), 240px); }
 }
 
 /* Dark mode */
@@ -108,10 +82,5 @@ button { padding: 10px 14px; border: 0; border-radius: var(--radius); background
   input { background: #18181a; color: var(--fg); border-color: var(--border); }
   button { background: #e9e9ea; color: #0f0f10; }
   .chip { background: #18181a; border-color: var(--border); }
-  .bg-clear   { background: linear-gradient(180deg, rgba(255,220,120,.15), transparent); }
-  .bg-clouds  { background: linear-gradient(180deg, rgba(120,130,145,.20), transparent); }
-  .bg-rain    { background: linear-gradient(180deg, rgba(90,120,180,.18), transparent); }
-  .bg-snow    { background: linear-gradient(180deg, rgba(200,220,240,.18), transparent); }
-  .bg-thunder { background: linear-gradient(180deg, rgba(120,110,160,.18), transparent); }
-  .bg-wind    { background: linear-gradient(180deg, rgba(130,140,150,.18), transparent); }
+  .wx-animbox { background: linear-gradient(180deg, rgba(120,130,145,.20), transparent); }
 }
