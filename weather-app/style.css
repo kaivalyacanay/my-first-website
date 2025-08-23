@@ -1,15 +1,11 @@
 * { box-sizing: border-box; }
 :root { --radius: 12px; --bg: #fafafa; --fg: #111; --border: #e5e5e5; --muted: #666; }
-body {
-  margin: 0;
-  font-family: Roboto, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
-  background: var(--bg); color: var(--fg);
-}
+body { margin: 0; font-family: Roboto, system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--fg); }
 .container { max-width: 1100px; margin: 48px auto; padding: 0 16px; }
 h1 { margin: 0 0 16px; font-weight: 700; }
 
 /* Form */
-form { display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px; margin-bottom: 12px; }
+form { display: grid; grid-template-columns: 1fr auto auto auto auto; gap: 10px; margin-bottom: 12px; }
 input { padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); font: inherit; }
 button { padding: 10px 14px; border: 0; border-radius: var(--radius); background: #111; color: #fff; cursor: pointer; font: inherit; }
 #clear-all { background: #b02a37; }

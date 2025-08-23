@@ -10,9 +10,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="style.css?v=10" />
+  <link rel="stylesheet" href="style.css?v=11" />
 
-  <!-- Primary Lottie (defer) — we ALSO have JS fallbacks in app.js -->
+  <!-- Try to load Lottie (we also have runtime fallbacks in app.js) -->
   <script defer src="https://cdn.jsdelivr.net/npm/lottie-web@5.12.2/build/player/lottie.min.js"></script>
 </head>
 <body>
@@ -24,6 +24,10 @@
       <button type="submit" title="Add to comparison">Add</button>
       <button id="use-location" type="button" title="Use my current location">Use my location</button>
       <button id="clear-all" type="button" title="Remove all compared places">Clear all</button>
+      <label style="display:flex;align-items:center;gap:6px;margin-left:auto">
+        <input id="anim-toggle" type="checkbox" checked />
+        Animations
+      </label>
     </form>
 
     <div id="recent" class="recent" aria-label="Recent searches"></div>
@@ -36,6 +40,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>

@@ -7,15 +7,15 @@ const clearAllBtn = document.getElementById("clear-all");
 const table = document.getElementById("wx-table");
 const recentWrap = document.getElementById("recent");
 const recentDataList = document.getElementById("recent-cities");
+const animToggle = document.getElementById("anim-toggle");
 
-// ----- Storage keys -----
-const RECENTS_KEY = "weather.recents.v1";
-
-// ----- Motion preference & URL flags -----
-const prefersReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+// ----- Query flags -----
 const urlParams = new URLSearchParams(location.search);
 const forceAnim = urlParams.get("anim") === "force";
 const demo = urlParams.get("demo") === "1";
+
+// ----- Storage keys -----
+const RECENTS_KEY = "weather.recents.v1";
 
 // ----- Helpers -----
 function setStatus(msg) { statusEl.textContent = msg; }
@@ -25,6 +25,7 @@ function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 function isNode(n) { return n && (n.nodeType === 1 || n.nodeType === 11); }
 function placeText(loc) { return `${loc.name}${loc.admin1 ? ", " + loc.admin1 : ""}${loc.country ? ", " + loc.country : ""}`.replace(/\s+/g, " ").trim(); }
 function locKey(loc) { return `${Math.round(loc.latitude*1000)},${Math.round(loc.longitude*1000)}`; }
+function animationsWanted() { return animToggle ? animToggle.checked : true; }
 
 // ----- Weather mapping -----
 function weatherGroup(code) {
@@ -121,7 +122,7 @@ function fallbackIcon(group) {
   return wrap;
 }
 
-// ----- Lottie loader (multi-CDN with timeout) -----
+// ----- Lottie loader -----
 function lottieAvailable() { return !!(window.lottie && typeof window.lottie.loadAnimation === "function"); }
 function loadScriptOnce(src) {
   return new Promise((resolve) => {
@@ -130,7 +131,7 @@ function loadScriptOnce(src) {
     s.onload = () => resolve(true);
     s.onerror = () => resolve(false);
     document.head.appendChild(s);
-    setTimeout(() => resolve(lottieAvailable()), 7000);
+    setTimeout(() => resolve(lottieAvailable()), 4000);
   });
 }
 let lottieTried = false;
@@ -172,7 +173,7 @@ updateRecentUI();
 // ----- Compare model -----
 let compare = []; // { key, loc, data, animBox, anim? }
 
-// Lottie JSON (embedded)
+// Small embedded Lottie JSONs
 const LOT = {
   clear: {"v":"5.7.6","fr":60,"ip":0,"op":120,"w":200,"h":125,"nm":"sun-pulse","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"sun","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,62,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":0,"s":[100,100,100]},{"t":60,"s":[110,110,100]},{"t":120,"s":[100,100,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[52,52]},"d":1},{"ty":"fl","c":{"a":0,"k":[1,0.72,0,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":120,"st":0,"bm":0}]},
   clouds: {"v":"5.7.6","fr":60,"ip":0,"op":120,"w":200,"h":125,"nm":"cloud-drift","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"cloud","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":0,"s":[100,60,0]},{"t":60,"s":[112,60,0]},{"t":120,"s":[100,60,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[-22,0]},"s":{"a":0,"k":[50,35]}},{"ty":"el","p":{"a":0,"k":[10,-8]},"s":{"a":0,"k":[60,40]}},{"ty":"rc","p":{"a":0,"k":[0,8]},"s":{"a":0,"k":[90,30]},"r":{"a":0,"k":15}},{"ty":"fl","c":{"a":0,"k":[0.78,0.82,0.88,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}],"ip":0,"op":120,"st":0,"bm":0}]},
@@ -223,40 +224,33 @@ function renderTable() {
     table.appendChild(row);
   }
 
-  // Header row: static SVG now, Lottie upgrade when available
+  // Header row: static SVG now, Lottie upgrade if enabled & available
   addRow("Metric", (entry) => {
-    const wrap = document.createElement("div");
-    wrap.className = "wx-head";
-
-    const animBox = document.createElement("div");
-    animBox.className = "wx-animbox";
+    const wrap = document.createElement("div"); wrap.className = "wx-head";
+    const animBox = document.createElement("div"); animBox.className = "wx-animbox";
 
     const g = weatherGroup(entry.data.current_weather.weathercode);
-    animBox.appendChild(fallbackIcon(g)); // always visible immediately
+    animBox.appendChild(fallbackIcon(g)); // always visible
 
-    const bar = document.createElement("div");
-    bar.className = "wx-headbar";
-    bar.textContent = placeText(entry.loc);
-    const btn = document.createElement("button");
-    btn.className = "remove"; btn.title = "Remove";
+    const bar = document.createElement("div"); bar.className = "wx-headbar"; bar.textContent = placeText(entry.loc);
+    const btn = document.createElement("button"); btn.className = "remove"; btn.title = "Remove";
     btn.setAttribute("aria-label", `Remove ${placeText(entry.loc)} from comparison`);
-    btn.textContent = "×";
-    btn.addEventListener("click", () => removeFromCompare(entry.key));
+    btn.textContent = "×"; btn.addEventListener("click", () => removeFromCompare(entry.key));
     bar.appendChild(btn);
 
     wrap.append(animBox, bar);
 
-    // Save box and attempt upgrade
+    // Save ref & try to animate
     entry.animBox = animBox;
     entry.anim && entry.anim.destroy && entry.anim.destroy();
     entry.anim = null;
 
-    if (forceAnim || !prefersReduced) {
+    if (animationsWanted()) {
       if (lottieAvailable()) {
         animBox.innerHTML = ""; lottieUpgrade(entry, animBox, g);
       } else {
         ensureLottie().then((ok) => {
-          if (ok && compare.find(e => e.key === entry.key) && entry.animBox) {
+          if (ok && compare.find(e => e.key === entry.key) && entry.animBox && animationsWanted()) {
             entry.animBox.innerHTML = ""; lottieUpgrade(entry, entry.animBox, g);
           }
         });
@@ -274,16 +268,18 @@ function renderTable() {
   addRow("Wind now", (e) => `${Math.round(e.data.current_weather.windspeed)} km/h`);
   addRow("Rain today", (e) => `${Math.round((e.data.daily.precipitation_sum[0] || 0) * 10) / 10} mm`);
   addRow("Local time", (e) => new Date(e.data.current_weather.time).toLocaleString());
+
+  // Show quick status (helps diagnose)
+  setStatus(`Animations: ${animationsWanted() ? "ON" : "OFF"} • Lottie ${lottieAvailable() ? "loaded" : "not loaded yet"}`);
 }
 
 function removeFromCompare(key) {
   const idx = compare.findIndex(e => e.key === key);
   if (idx !== -1 && compare[idx].anim && compare[idx].anim.destroy) compare[idx].anim.destroy();
-  compare.splice(idx, 1);
-  renderTable();
+  compare.splice(idx, 1); renderTable();
 }
 
-// ----- API calls -----
+// ----- API -----
 async function geocode(name) {
   const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1&language=en&format=json`;
   const res = await fetch(url);
@@ -303,19 +299,27 @@ async function fetchWeather(lat, lon) {
   return res.json();
 }
 
+async function addToCompareFlow(loc) {
+  try {
+    if (compare.length >= 3) { setStatus("Comparison is full (3). Remove one to add another."); return; }
+    setStatus(`Fetching weather for ${placeText(loc)}…`);
+    const data = await fetchWeather(loc.latitude, loc.longitude);
+    const key = locKey(loc);
+    if (compare.some(e => e.key === key)) { setStatus("That place is already in the comparison."); return; }
+    compare.push({ key, loc, data, anim: null, animBox: null });
+    addRecent(loc); renderTable(); clearStatus();
+  } catch (err) { console.error(err); setStatus("Could not fetch weather for that place."); }
+}
+
 // ----- Events -----
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
-  const q = cityInput.value.trim();
-  if (!q) return;
+  const q = cityInput.value.trim(); if (!q) return;
   setStatus(`Looking up "${q}"…`);
   try {
     const loc = await geocode(q);
     if (!loc) { setStatus(`No results for "${q}".`); return; }
-    await addToCompareFlow({
-      name: loc.name, country: loc.country, admin1: loc.admin1 || "",
-      latitude: loc.latitude, longitude: loc.longitude
-    });
+    await addToCompareFlow({ name: loc.name, country: loc.country, admin1: loc.admin1 || "", latitude: loc.latitude, longitude: loc.longitude });
     cityInput.value = "";
   } catch (err) { console.error(err); setStatus("Something went wrong. Please try again."); }
 });
@@ -340,7 +344,9 @@ clearAllBtn.addEventListener("click", () => {
   compare = []; renderTable(); setStatus("Cleared all compared places."); setTimeout(clearStatus, 1200);
 });
 
-// ----- Demo mode (shows 3 columns without any typing) -----
+animToggle?.addEventListener("change", () => { renderTable(); });
+
+// ----- Demo mode -----
 async function bootDemo() {
   const samples = [
     { name:"Mumbai", admin1:"Maharashtra", country:"India", latitude:19.076, longitude:72.8777, demoCode: 2 },
@@ -348,7 +354,6 @@ async function bootDemo() {
     { name:"Tokyo", admin1:"Tokyo", country:"Japan", latitude:35.6762, longitude:139.6503, demoCode: 0 }
   ];
   for (const s of samples) {
-    // try real fetch; if it fails, synthesize minimal data
     try {
       const data = await fetchWeather(s.latitude, s.longitude);
       compare.push({ key: locKey(s), loc: s, data, anim: null, animBox: null });
@@ -365,8 +370,4 @@ async function bootDemo() {
 }
 
 // ----- Initial -----
-if (demo) {
-  bootDemo();
-} else {
-  renderTable();
-}
+if (demo) { bootDemo(); } else { renderTable(); }
