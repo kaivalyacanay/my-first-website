@@ -27,7 +27,7 @@ function locKey(loc) {
   return `${Math.round(loc.latitude*1000)},${Math.round(loc.longitude*1000)}`;
 }
 
-// Group by WMO codes
+// Weather groups & labels via WMO codes
 function weatherGroup(code) {
   if ([0].includes(code)) return "clear";
   if ([1,2,3,45,48].includes(code)) return "clouds";
@@ -52,13 +52,81 @@ function weatherText(code) {
   };
   return map[code] || "Cloudy";
 }
-function emojiForGroup(g) {
-  return g === "clear"   ? "☀️"
-       : g === "clouds"  ? "⛅"
-       : g === "rain"    ? "🌧️"
-       : g === "snow"    ? "🌨️"
-       : g === "thunder" ? "⛈️"
-       :                   "💨";
+
+// ----- Animated SVG icons (small, classy, no libs) -----
+function createWeatherIcon(group) {
+  const span = document.createElement("span");
+  span.className = "wx-ico " + ({
+    clear:"ic-sun", clouds:"ic-cloud", rain:"ic-rain", snow:"ic-snow", thunder:"ic-thunder", wind:"ic-wind"
+  }[group] || "ic-cloud");
+
+  // SVGs are sized via CSS (28x28)
+  const svg =
+    group === "clear" ? `
+      <svg viewBox="0 0 28 28" aria-label="Sunny">
+        <circle cx="14" cy="14" r="5" fill="#FDB813"/>
+        <g class="rays" stroke="#FDB813" stroke-width="2" stroke-linecap="round">
+          <line x1="14" y1="2"  x2="14" y2="6"/>
+          <line x1="14" y1="22" x2="14" y2="26"/>
+          <line x1="2"  y1="14" x2="6"  y2="14"/>
+          <line x1="22" y1="14" x2="26" y2="14"/>
+          <line x1="6"  y1="6"  x2="9"  y2="9"/>
+          <line x1="19" y1="19" x2="22" y2="22"/>
+          <line x1="19" y1="9"  x2="22" y2="6"/>
+          <line x1="6"  y1="22" x2="9"  y2="19"/>
+        </g>
+      </svg>`
+    : group === "clouds" ? `
+      <svg viewBox="0 0 28 28" aria-label="Cloudy" class="ic-cloud">
+        <g class="cloud" fill="#C8D2E1">
+          <circle cx="10" cy="13" r="5"/>
+          <circle cx="15" cy="11" r="6"/>
+          <rect x="6" y="13" width="16" height="6" rx="3"/>
+        </g>
+      </svg>`
+    : group === "rain" ? `
+      <svg viewBox="0 0 28 28" aria-label="Rainy" class="ic-rain">
+        <g class="cloud" fill="#C8D2E1">
+          <circle cx="10" cy="11" r="5"/>
+          <circle cx="15" cy="9" r="6"/>
+          <rect x="6" y="11" width="16" height="6" rx="3"/>
+        </g>
+        <g stroke="#5A8DEE" stroke-width="2" stroke-linecap="round" opacity=".9">
+          <line class="drop d1" x1="10" y1="18" x2="10" y2="24"/>
+          <line class="drop d2" x1="14" y1="18" x2="14" y2="24"/>
+          <line class="drop d3" x1="18" y1="18" x2="18" y2="24"/>
+        </g>
+      </svg>`
+    : group === "snow" ? `
+      <svg viewBox="0 0 28 28" aria-label="Snowy" class="ic-snow">
+        <g class="cloud" fill="#C8D2E1">
+          <circle cx="10" cy="11" r="5"/>
+          <circle cx="15" cy="9" r="6"/>
+          <rect x="6" y="11" width="16" height="6" rx="3"/>
+        </g>
+        <g fill="#FFFFFF">
+          <circle class="flake f1" cx="10" cy="20" r="1.2"/>
+          <circle class="flake f2" cx="14" cy="20" r="1.2"/>
+          <circle class="flake f3" cx="18" cy="20" r="1.2"/>
+        </g>
+      </svg>`
+    : group === "thunder" ? `
+      <svg viewBox="0 0 28 28" aria-label="Thunderstorm" class="ic-thunder">
+        <g class="cloud" fill="#B5B1D8">
+          <circle cx="10" cy="11" r="5"/>
+          <circle cx="15" cy="9" r="6"/>
+          <rect x="6" y="11" width="16" height="6" rx="3"/>
+        </g>
+        <polygon class="bolt" points="13,13 11,20 15,20 13,26 19,17 15,17 17,13" fill="#F8E71C" opacity=".85"/>
+      </svg>`
+    : /* wind */ `
+      <svg viewBox="0 0 28 28" aria-label="Windy" class="ic-wind">
+        <path class="stream" d="M4 12 C10 10, 14 10, 22 12" fill="none" stroke="#9AA7B7" stroke-width="2" stroke-linecap="round"/>
+        <path class="stream" d="M6 16 C12 14, 16 14, 24 16" fill="none" stroke="#9AA7B7" stroke-width="2" stroke-linecap="round"/>
+      </svg>`;
+
+  span.innerHTML = svg;
+  return span;
 }
 
 // ----- Recents -----
@@ -109,6 +177,7 @@ function renderTable() {
   function addRow(label, getVal, bgClassForCol = null, header = false) {
     const row = document.createElement("div");
     row.className = "wx-row" + (header ? " wx-header" : "");
+
     const lab = document.createElement("div");
     lab.className = "wx-cell wx-label";
     lab.setAttribute("role", header ? "columnheader" : "rowheader");
@@ -134,14 +203,16 @@ function renderTable() {
     table.appendChild(row);
   }
 
-  // Header + emoji + remove button
+  // Header row: icon + location + remove button
   addRow("Metric", (entry) => {
     const wrap = document.createElement("div");
     wrap.className = "wx-colhead";
 
     const left = document.createElement("span");
     const g = weatherGroup(entry.data.current_weather.weathercode);
-    left.innerHTML = `<span class="wx-emoji">${emojiForGroup(g)}</span>${placeText(entry.loc)}`;
+    const icon = createWeatherIcon(g);
+    left.appendChild(icon);
+    left.appendChild(document.createTextNode(placeText(entry.loc)));
 
     const btn = document.createElement("button");
     btn.className = "remove"; btn.title = "Remove";
