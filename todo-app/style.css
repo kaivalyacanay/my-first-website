@@ -1,0 +1,14 @@
+* { box-sizing: border-box; }
+body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; padding: 0; }
+.container { max-width: 640px; margin: 48px auto; padding: 0 16px; }
+h1 { margin-bottom: 16px; }
+form { display: flex; gap: 8px; margin-bottom: 16px; }
+input { flex: 1; padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; }
+button { padding: 10px 14px; border: 0; border-radius: 6px; cursor: pointer; background: #111; color: #fff; }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+.list { list-style: none; padding: 0; margin: 0; }
+.item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 8px; }
+.item input[type="checkbox"] { width: 18px; height: 18px; }
+.item label { flex: 1; }
+.item.done label { text-decoration: line-through; color: #777; }
+.controls { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
