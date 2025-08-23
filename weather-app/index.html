@@ -4,16 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Weather</title>
-  <link rel="stylesheet" href="style.css?v=1" />
+  <link rel="stylesheet" href="style.css?v=2" />
 </head>
 <body>
   <main class="container">
     <h1>Weather</h1>
 
     <form id="search-form" autocomplete="off">
-      <input id="city-input" type="text" placeholder="Enter a city (e.g., Mumbai)" aria-label="City" required />
-      <button type="submit">Search</button>
+      <input id="city-input" type="text" placeholder="Enter a city (e.g., Mumbai)" aria-label="City" list="recent-cities" required />
+      <button type="submit" title="Search by city">Search</button>
+      <button id="use-location" type="button" title="Use my current location">Use my location</button>
     </form>
+
+    <!-- Recent searches (clickable chips) -->
+    <div id="recent" class="recent" aria-label="Recent searches"></div>
+    <!-- Also wire recent cities into a native datalist for suggestions -->
+    <datalist id="recent-cities"></datalist>
 
     <section id="status" class="status" aria-live="polite"></section>
 
@@ -28,6 +34,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=1"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>
