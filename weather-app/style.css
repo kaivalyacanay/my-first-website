@@ -1,13 +1,17 @@
 * { box-sizing: border-box; }
 :root { --radius: 12px; --bg: #fafafa; --fg: #111; --border: #e5e5e5; --muted: #666; }
-body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: var(--fg); }
+body {
+  margin: 0;
+  font-family: Roboto, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  background: var(--bg); color: var(--fg);
+}
 .container { max-width: 1100px; margin: 48px auto; padding: 0 16px; }
-h1 { margin: 0 0 16px; }
+h1 { margin: 0 0 16px; font-weight: 700; }
 
 /* Form */
 form { display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px; margin-bottom: 12px; }
-input { padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); }
-button { padding: 10px 14px; border: 0; border-radius: var(--radius); background: #111; color: #fff; cursor: pointer; }
+input { padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); font: inherit; }
+button { padding: 10px 14px; border: 0; border-radius: var(--radius); background: #111; color: #fff; cursor: pointer; font: inherit; }
 #clear-all { background: #b02a37; }
 
 .status { min-height: 24px; color: var(--muted); margin: 8px 0 12px; }
@@ -42,14 +46,14 @@ button { padding: 10px 14px; border: 0; border-radius: var(--radius); background
 .wx-label { background: #f8f8f8; font-weight: 600; color: #333; }
 
 /* Header cells: taller, host the Lottie animation box */
-.wx-header .wx-cell { padding: 0; min-height: 160px; }
+.wx-header .wx-cell { padding: 0; min-height: 170px; }
 .wx-head {
   display: grid;
-  grid-template-rows: 120px auto;
+  grid-template-rows: 125px auto;
   height: 100%;
 }
 .wx-animbox {
-  height: 120px; width: 100%;
+  height: 125px; width: 100%;
   display: flex; align-items: center; justify-content: center;
   background: linear-gradient(180deg, rgba(200,210,225,.20), transparent);
 }
