@@ -3,37 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Weather</title>
-  <link rel="stylesheet" href="style.css?v=2" />
+  <title>Weather Compare</title>
+  <link rel="stylesheet" href="style.css?v=3" />
 </head>
 <body>
   <main class="container">
-    <h1>Weather</h1>
+    <h1>Weather Compare</h1>
 
     <form id="search-form" autocomplete="off">
       <input id="city-input" type="text" placeholder="Enter a city (e.g., Mumbai)" aria-label="City" list="recent-cities" required />
-      <button type="submit" title="Search by city">Search</button>
+      <button type="submit" title="Add to comparison">Add</button>
       <button id="use-location" type="button" title="Use my current location">Use my location</button>
     </form>
 
-    <!-- Recent searches (clickable chips) -->
     <div id="recent" class="recent" aria-label="Recent searches"></div>
-    <!-- Also wire recent cities into a native datalist for suggestions -->
     <datalist id="recent-cities"></datalist>
 
     <section id="status" class="status" aria-live="polite"></section>
 
-    <section id="current" class="card" hidden>
-      <h2 id="place"></h2>
-      <p id="current-summary"></p>
-    </section>
-
-    <section id="forecast" class="card" hidden>
-      <h3>Next 7 days</h3>
-      <ul id="daily-list" class="list"></ul>
-    </section>
+    <!-- New comparison grid -->
+    <section id="compare" class="compare-grid" aria-label="Comparison grid"></section>
   </main>
 
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>
