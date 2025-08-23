@@ -13,7 +13,7 @@ const RECENTS_KEY = "weather.recents.v1";
 
 // ----- Motion preference -----
 const prefersReduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-// Allow override via URL: ?anim=force (for debugging)
+// Debug override via URL: ?anim=force
 const urlParams = new URLSearchParams(location.search);
 const forceAnim = urlParams.get("anim") === "force";
 
@@ -25,6 +25,7 @@ function safeLoad(key, fallback) {
   catch { return fallback; }
 }
 function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+function isNode(n) { return n && (n.nodeType === 1 || n.nodeType === 11); } // element or fragment
 
 function placeText(loc) {
   return `${loc.name}${loc.admin1 ? ", " + loc.admin1 : ""}${loc.country ? ", " + loc.country : ""}`.replace(/\s+/g, " ").trim();
@@ -59,34 +60,111 @@ function weatherText(code) {
   return map[code] || "Cloudy";
 }
 
-// ----- Lightweight fallback SVG if Lottie unavailable -----
-function fallbackSVG(group) {
-  const span = document.createElement("span");
-  span.style.display = "inline-flex";
-  span.style.width = "28px";
-  span.style.height = "28px";
-  span.style.alignItems = "center";
-  span.style.justifyContent = "center";
-  span.style.marginRight = "8px";
-  span.innerHTML =
-    group === "clear" ? "☀️"
-  : group === "clouds" ? "⛅"
-  : group === "rain" ? "🌧️"
-  : group === "snow" ? "🌨️"
-  : group === "thunder" ? "⛈️"
-  : "💨";
-  return span;
+// ----- Fallback inline SVG (always shows) -----
+function fallbackIcon(group) {
+  const wrap = document.createElement("div");
+  wrap.className = "wx-fallback";
+  wrap.innerHTML =
+    group === "clear" ? `
+      <svg viewBox="0 0 56 56" role="img" aria-label="Sunny">
+        <circle cx="28" cy="28" r="10" fill="#FDB813"/>
+        <g stroke="#FDB813" stroke-width="3" stroke-linecap="round">
+          <line x1="28" y1="4"  x2="28" y2="12"/>
+          <line x1="28" y1="44" x2="28" y2="52"/>
+          <line x1="4"  y1="28" x2="12" y2="28"/>
+          <line x1="44" y1="28" x2="52" y2="28"/>
+          <line x1="12" y1="12" x2="18" y2="18"/>
+          <line x1="38" y1="38" x2="44" y2="44"/>
+          <line x1="38" y1="18" x2="44" y2="12"/>
+          <line x1="12" y1="44" x2="18" y2="38"/>
+        </g>
+      </svg>`
+  : group === "clouds" ? `
+      <svg viewBox="0 0 56 56" role="img" aria-label="Cloudy">
+        <g fill="#C8D2E1">
+          <circle cx="20" cy="28" r="10"/>
+          <circle cx="30" cy="24" r="12"/>
+          <rect x="12" y="28" width="32" height="12" rx="6"/>
+        </g>
+      </svg>`
+  : group === "rain" ? `
+      <svg viewBox="0 0 56 56" role="img" aria-label="Rain">
+        <g fill="#C8D2E1">
+          <circle cx="20" cy="24" r="10"/>
+          <circle cx="30" cy="20" r="12"/>
+          <rect x="12" y="24" width="32" height="12" rx="6"/>
+        </g>
+        <g stroke="#5A8DEE" stroke-width="3" stroke-linecap="round">
+          <line x1="18" y1="40" x2="18" y2="50"/>
+          <line x1="28" y1="40" x2="28" y2="50"/>
+          <line x1="38" y1="40" x2="38" y2="50"/>
+        </g>
+      </svg>`
+  : group === "snow" ? `
+      <svg viewBox="0 0 56 56" role="img" aria-label="Snow">
+        <g fill="#C8D2E1">
+          <circle cx="20" cy="24" r="10"/>
+          <circle cx="30" cy="20" r="12"/>
+          <rect x="12" y="24" width="32" height="12" rx="6"/>
+        </g>
+        <g fill="#fff">
+          <circle cx="18" cy="45" r="2"/>
+          <circle cx="28" cy="45" r="2"/>
+          <circle cx="38" cy="45" r="2"/>
+        </g>
+      </svg>`
+  : group === "thunder" ? `
+      <svg viewBox="0 0 56 56" role="img" aria-label="Thunder">
+        <g fill="#B5B1D8">
+          <circle cx="20" cy="24" r="10"/>
+          <circle cx="30" cy="20" r="12"/>
+          <rect x="12" y="24" width="32" height="12" rx="6"/>
+        </g>
+        <polygon points="26,30 22,42 30,42 26,52 36,36 30,36 32,30" fill="#F8E71C"/>
+      </svg>`
+  : `
+      <svg viewBox="0 0 56 56" role="img" aria-label="Wind">
+        <path d="M8 28 C20 24, 28 24, 48 28" fill="none" stroke="#9AA7B7" stroke-width="3" stroke-linecap="round"/>
+        <path d="M12 36 C22 32, 30 32, 50 36" fill="none" stroke="#9AA7B7" stroke-width="3" stroke-linecap="round"/>
+      </svg>`;
+  return wrap;
 }
 
-// ----- Tiny embedded Lottie JSONs (very small, SVG renderer) -----
-const LOT = {
-  clear: {"v":"5.7.6","fr":60,"ip":0,"op":120,"w":200,"h":125,"nm":"sun-pulse","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"sun","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,62,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":0,"s":[100,100,100]},{"t":60,"s":[110,110,100]},{"t":120,"s":[100,100,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[52,52]},"d":1},{"ty":"fl","c":{"a":0,"k":[1,0.72,0,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":120,"st":0,"bm":0}]},
-  clouds: {"v":"5.7.6","fr":60,"ip":0,"op":120,"w":200,"h":125,"nm":"cloud-drift","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"cloud","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":0,"s":[100,60,0]},{"t":60,"s":[112,60,0]},{"t":120,"s":[100,60,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[-22,0]},"s":{"a":0,"k":[50,35]}},{"ty":"el","p":{"a":0,"k":[10,-8]},"s":{"a":0,"k":[60,40]}},{"ty":"rc","p":{"a":0,"k":[0,8]},"s":{"a":0,"k":[90,30]},"r":{"a":0,"k":15}},{"ty":"fl","c":{"a":0,"k":[0.78,0.82,0.88,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}],"ip":0,"op":120,"st":0,"bm":0}]},
-  rain: {"v":"5.7.6","fr":60,"ip":0,"op":120,"w":200,"h":125,"nm":"rain","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"cloud","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,55,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[-20,0]},"s":{"a":0,"k":[50,35]}},{"ty":"el","p":{"a":0,"k":[10,-8]},"s":{"a":0,"k":[60,40]}},{"ty":"rc","p":{"a":0,"k":[0,8]},"s":{"a":0,"k":[90,30]},"r":{"a":0,"k":15}},{"ty":"fl","c":{"a":0,"k":[0.78,0.82,0.88,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]},{"ddd":0,"ind":2,"ty":4,"nm":"drop1","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":0,"s":[80,75,0]},{"t":90,"s":[80,110,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"rc","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[4,14]},"r":{"a":0,"k":2}},{"ty":"fl","c":{"a":0,"k":[0.35,0.55,0.93,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]},{"ddd":0,"ind":3,"ty":4,"nm":"drop2","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":10,"s":[100,75,0]},{"t":100,"s":[100,110,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"rc","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[4,14]},"r":{"a":0,"k":2}},{"ty":"fl","c":{"a":0,"k":[0.35,0.55,0.93,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]},{"ddd":0,"ind":4,"ty":4,"nm":"drop3","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":20,"s":[120,75,0]},{"t":110,"s":[120,110,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"rc","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[4,14]},"r":{"a":0,"k":2}},{"ty":"fl","c":{"a":0,"k":[0.35,0.55,0.93,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]}]},
-  snow: {"v":"5.7.6","fr":60,"ip":0,"op":120,"w":200,"h":125,"nm":"snow","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"cloud","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,55,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[-20,0]},"s":{"a":0,"k":[50,35]}},{"ty":"el","p":{"a":0,"k":[10,-8]},"s":{"a":0,"k":[60,40]}},{"ty":"rc","p":{"a":0,"k":[0,8]},"s":{"a":0,"k":[90,30]},"r":{"a":0,"k":15}},{"ty":"fl","c":{"a":0,"k":[0.78,0.82,0.88,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]},{"ddd":0,"ind":2,"ty":4,"nm":"flake1","sr":1,"ks":{"o":{"a":1,"k":[{"t":0,"s":0},{"t":10,"s":100},{"t":100,"s":0}]},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":0,"s":[85,75,0]},{"t":100,"s":[90,110,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[6,6]}},{"ty":"fl","c":{"a":0,"k":[1,1,1,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]},{"ddd":0,"ind":3,"ty":4,"nm":"flake2","sr":1,"ks":{"o":{"a":1,"k":[{"t":0,"s":0},{"t":20,"s":100},{"t":110,"s":0}]},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":0,"s":[105,75,0]},{"t":100,"s":[110,110,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[6,6]}},{"ty":"fl","c":{"a":0,"k":[1,1,1,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]}]},
-  thunder: {"v":"5.7.6","fr":60,"ip":0,"op":120,"w":200,"h":125,"nm":"thunder","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"cloud","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,55,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[-20,0]},"s":{"a":0,"k":[50,35]}},{"ty":"el","p":{"a":0,"k":[10,-8]},"s":{"a":0,"k":[60,40]}},{"ty":"rc","p":{"a":0,"k":[0,8]},"s":{"a":0,"k":[90,30]},"r":{"a":0,"k":15}},{"ty":"fl","c":{"a":0,"k":[0.71,0.69,0.85,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]},{"ddd":0,"ind":2,"ty":4,"nm":"bolt","sr":1,"ks":{"o":{"a":1,"k":[{"t":0,"s":0},{"t":90,"s":0},{"t":95,"s":100},{"t":105,"s":40},{"t":120,"s":0}]},"r":{"a":0,"k":0},"p":{"a":0,"k":[120,90,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"sh","ks":{"a":0,"k":{"i":[],"o":[],"v":[[0,-10],[-6,8],[4,8],[-2,26],[8,10],[0,10]],"c":true}}},{"ty":"fl","c":{"a":0,"k":[0.97,0.91,0.11,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]}]}
-};
-LOT.wind = LOT.clouds;
+// ----- Lottie loader (tries 3 CDNs with timeout, upgrades headers if available) -----
+function lottieAvailable() {
+  return !!(window.lottie && typeof window.lottie.loadAnimation === "function");
+}
+
+function loadScriptOnce(src) {
+  return new Promise((resolve) => {
+    const s = document.createElement("script");
+    s.src = src;
+    s.async = true;
+    s.crossOrigin = "anonymous";
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.head.appendChild(s);
+    // 7s safety timeout
+    setTimeout(() => resolve(lottieAvailable()), 7000);
+  });
+}
+
+let lottieTried = false;
+async function ensureLottie() {
+  if (lottieAvailable()) return true;
+  if (lottieTried) return false;
+  lottieTried = true;
+  const sources = [
+    "https://cdn.jsdelivr.net/npm/lottie-web@5.12.2/build/player/lottie.min.js",
+    "https://unpkg.com/lottie-web@5.12.2/build/player/lottie.min.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"
+  ];
+  for (const url of sources) {
+    const ok = await loadScriptOnce(url);
+    if (ok) return true;
+  }
+  return lottieAvailable();
+}
 
 // ----- Recents -----
 let recents = safeLoad(RECENTS_KEY, []); // {name,country,admin1,latitude,longitude}
@@ -116,11 +194,32 @@ function updateRecentUI() {
 updateRecentUI();
 
 // ----- Compare model (max 3) -----
-let compare = []; // { key, loc, data, anim? }
+let compare = []; // { key, loc, data, animBox, anim? }
 
-// Ensure Lottie is ready (or report if missing)
-function lottieAvailable() {
-  return !!(window.lottie && typeof window.lottie.loadAnimation === "function");
+// Lottie animations (small embedded JSONs)
+const LOT = {
+  clear: {"v":"5.7.6","fr":60,"ip":0,"op":120,"w":200,"h":125,"nm":"sun-pulse","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"sun","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,62,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":0,"s":[100,100,100]},{"t":60,"s":[110,110,100]},{"t":120,"s":[100,100,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[52,52]},"d":1},{"ty":"fl","c":{"a":0,"k":[1,0.72,0,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":120,"st":0,"bm":0}]},
+  clouds: {"v":"5.7.6","fr":60,"ip":0,"op":120,"w":200,"h":125,"nm":"cloud-drift","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"cloud","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":0,"s":[100,60,0]},{"t":60,"s":[112,60,0]},{"t":120,"s":[100,60,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[-22,0]},"s":{"a":0,"k":[50,35]}},{"ty":"el","p":{"a":0,"k":[10,-8]},"s":{"a":0,"k":[60,40]}},{"ty":"rc","p":{"a":0,"k":[0,8]},"s":{"a":0,"k":[90,30]},"r":{"a":0,"k":15}},{"ty":"fl","c":{"a":0,"k":[0.78,0.82,0.88,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}],"ip":0,"op":120,"st":0,"bm":0}]},
+  rain: {"v":"5.7.6","fr":60,"ip":0,"op":120,"w":200,"h":125,"nm":"rain","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"cloud","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,55,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[-20,0]},"s":{"a":0,"k":[50,35]}},{"ty":"el","p":{"a":0,"k":[10,-8]},"s":{"a":0,"k":[60,40]}},{"ty":"rc","p":{"a":0,"k":[0,8]},"s":{"a":0,"k":[90,30]},"r":{"a":0,"k":15}},{"ty":"fl","c":{"a":0,"k":[0.78,0.82,0.88,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]},{"ddd":0,"ind":2,"ty":4,"nm":"drop1","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":0,"s":[80,75,0]},{"t":90,"s":[80,110,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"rc","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[4,14]},"r":{"a":0,"k":2}},{"ty":"fl","c":{"a":0,"k":[0.35,0.55,0.93,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]},{"ddd":0,"ind":3,"ty":4,"nm":"drop2","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":10,"s":[100,75,0]},{"t":100,"s":[100,110,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"rc","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[4,14]},"r":{"a":0,"k":2}},{"ty":"fl","c":{"a":0,"k":[0.35,0.55,0.93,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]},{"ddd":0,"ind":4,"ty":4,"nm":"drop3","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":20,"s":[120,75,0]},{"t":110,"s":[120,110,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"rc","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[4,14]},"r":{"a":0,"k":2}},{"ty":"fl","c":{"a":0,"k":[0.35,0.55,0.93,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]}]},
+  snow: {"v":"5.7.6","fr":60,"ip":0,"op":120,"w":200,"h":125,"nm":"snow","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"cloud","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,55,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[-20,0]},"s":{"a":0,"k":[50,35]}},{"ty":"el","p":{"a":0,"k":[10,-8]},"s":{"a":0,"k":[60,40]}},{"ty":"rc","p":{"a":0,"k":[0,8]},"s":{"a":0,"k":[90,30]},"r":{"a":0,"k":15}},{"ty":"fl","c":{"a":0,"k":[0.78,0.82,0.88,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]},{"ddd":0,"ind":2,"ty":4,"nm":"flake1","sr":1,"ks":{"o":{"a":1,"k":[{"t":0,"s":0},{"t":10,"s":100},{"t":100,"s":0}]},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":0,"s":[85,75,0]},{"t":100,"s":[90,110,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[6,6]}},{"ty":"fl","c":{"a":0,"k":[1,1,1,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]},{"ddd":0,"ind":3,"ty":4,"nm":"flake2","sr":1,"ks":{"o":{"a":1,"k":[{"t":0,"s":0},{"t":20,"s":100},{"t":110,"s":0}]},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":0,"s":[105,75,0]},{"t":100,"s":[110,110,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[6,6]}},{"ty":"fl","c":{"a":0,"k":[1,1,1,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]}]},
+  thunder: {"v":"5.7.6","fr":60,"ip":0,"op":120,"w":200,"h":125,"nm":"thunder","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"cloud","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,55,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[-20,0]},"s":{"a":0,"k":[50,35]}},{"ty":"el","p":{"a":0,"k":[10,-8]},"s":{"a":0,"k":[60,40]}},{"ty":"rc","p":{"a":0,"k":[0,8]},"s":{"a":0,"k":[90,30]},"r":{"a":0,"k":15}},{"ty":"fl","c":{"a":0,"k":[0.71,0.69,0.85,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]},{"ddd":0,"ind":2,"ty":4,"nm":"bolt","sr":1,"ks":{"o":{"a":1,"k":[{"t":0,"s":0},{"t":90,"s":0},{"t":95,"s":100},{"t":105,"s":40},{"t":120,"s":0}]},"r":{"a":0,"k":0},"p":{"a":0,"k":[120,90,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"sh","ks":{"a":0,"k":{"i":[],"o":[],"v":[[0,-10],[-6,8],[4,8],[-2,26],[8,10],[0,10]],"c":true}}},{"ty":"fl","c":{"a":0,"k":[0.97,0.91,0.11,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]}]}
+};
+LOT.wind = LOT.clouds;
+
+function lottieUpgrade(entry, animBox, group) {
+  const data = LOT[group] || LOT.clouds;
+  try {
+    entry.anim = window.lottie.loadAnimation({
+      container: animBox,
+      renderer: "svg",
+      loop: true,
+      autoplay: true,
+      animationData: data
+    });
+  } catch (e) {
+    // Leave fallback in place
+    entry.anim = null;
+  }
 }
 
 function renderTable() {
@@ -152,23 +251,24 @@ function renderTable() {
       cell.setAttribute("role", header ? "columnheader" : "cell");
 
       const content = getVal(entry);
-      if (content instanceof Node) cell.appendChild(content); else cell.textContent = content;
+      if (isNode(content)) cell.appendChild(content); else cell.textContent = content;
       row.appendChild(cell);
     });
 
     table.appendChild(row);
   }
 
-  // Header row: Lottie (top) + name/remove (bottom)
+  // Header row: fallback SVG immediately; upgrade to Lottie if/when available
   addRow("Metric", (entry) => {
     const wrap = document.createElement("div");
     wrap.className = "wx-head";
 
-    // Animation box
     const animBox = document.createElement("div");
     animBox.className = "wx-animbox";
 
-    // Label bar
+    const g = weatherGroup(entry.data.current_weather.weathercode);
+    animBox.appendChild(fallbackIcon(g)); // always visible immediately
+
     const bar = document.createElement("div");
     bar.className = "wx-headbar";
     bar.textContent = placeText(entry.loc);
@@ -181,38 +281,34 @@ function renderTable() {
 
     wrap.append(animBox, bar);
 
-    // Start / refresh Lottie (or fallback)
-    const g = weatherGroup(entry.data.current_weather.weathercode);
-    const data = LOT[g] || LOT.clouds;
+    // Store animBox for possible upgrade
+    entry.animBox = animBox;
+    entry.anim && entry.anim.destroy && entry.anim.destroy();
+    entry.anim = null;
 
-    // Clean up previous if any
-    if (entry.anim && entry.anim.destroy) entry.anim.destroy();
-
-    const canAnimate = (forceAnim || !prefersReduced) && lottieAvailable();
-
-    if (canAnimate) {
-      try {
-        entry.anim = lottie.loadAnimation({
-          container: animBox,
-          renderer: "svg",
-          loop: true,
-          autoplay: true,
-          animationData: data
+    // Try to upgrade to Lottie (only if motion allowed)
+    if (forceAnim || !prefersReduced) {
+      if (lottieAvailable()) {
+        animBox.innerHTML = ""; // remove fallback
+        lottieUpgrade(entry, animBox, g);
+      } else {
+        // attempt to load and upgrade after
+        ensureLottie().then((ok) => {
+          if (ok) {
+            // Make sure this column still exists and animBox is still mounted
+            if (compare.find(e => e.key === entry.key) && entry.animBox) {
+              entry.animBox.innerHTML = "";
+              lottieUpgrade(entry, entry.animBox, g);
+            }
+          }
         });
-      } catch (e) {
-        console.warn("Lottie failed, falling back to SVG:", e);
-        entry.anim = null;
-        animBox.appendChild(fallbackSVG(g));
       }
-    } else {
-      entry.anim = null;
-      animBox.appendChild(fallbackSVG(g));
     }
 
     return wrap;
   }, true);
 
-  // Data rows (static)
+  // Data rows
   addRow("Condition", (e) => weatherText(e.data.current_weather.weathercode));
   addRow("Temperature now", (e) => `${Math.round(e.data.current_weather.temperature)}°C`);
   addRow("Min today", (e) => `${Math.round(e.data.daily.temperature_2m_min[0])}°C`);
@@ -238,7 +334,7 @@ async function addToCompareFlow(loc) {
     const data = await fetchWeather(loc.latitude, loc.longitude);
     const key = locKey(loc);
     if (compare.some(e => e.key === key)) { setStatus("That place is already in the comparison."); return; }
-    compare.push({ key, loc, data, anim: null });
+    compare.push({ key, loc, data, anim: null, animBox: null });
     addRecent(loc);
     renderTable();
     clearStatus();
