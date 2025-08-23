@@ -5,7 +5,6 @@ const statusEl = document.getElementById("status");
 const useLocBtn = document.getElementById("use-location");
 const clearAllBtn = document.getElementById("clear-all");
 const table = document.getElementById("wx-table");
-const tableWrap = document.getElementById("table-wrap");
 const recentWrap = document.getElementById("recent");
 const recentDataList = document.getElementById("recent-cities");
 
@@ -28,14 +27,13 @@ function locKey(loc) {
   return `${Math.round(loc.latitude*1000)},${Math.round(loc.longitude*1000)}`;
 }
 
-// Map WMO weather codes to coarse groups for animation & labels
+// Group by WMO codes
 function weatherGroup(code) {
-  if ([0].includes(code)) return "clear";            // Clear sky
-  if ([1,2,3,45,48].includes(code)) return "clouds"; // Mainly clear/partly/overcast/fog
-  if ([51,53,55,56,57].includes(code)) return "rain"; // Drizzle (incl. freezing)
-  if ([61,63,65,66,67,80,81,82].includes(code)) return "rain"; // Rain/showers
-  if ([71,73,75,77,85,86].includes(code)) return "snow";       // Snow / snow grains
-  if ([95,96,99].includes(code)) return "thunder";             // Thunder
+  if ([0].includes(code)) return "clear";
+  if ([1,2,3,45,48].includes(code)) return "clouds";
+  if ([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) return "rain";
+  if ([71,73,75,77,85,86].includes(code)) return "snow";
+  if ([95,96,99].includes(code)) return "thunder";
   return "clouds";
 }
 function weatherText(code) {
@@ -50,9 +48,17 @@ function weatherText(code) {
     77:"Snow grains",
     80:"Slight rain showers",81:"Moderate rain showers",82:"Violent rain showers",
     85:"Slight snow showers",86:"Heavy snow showers",
-    95:"Thunderstorm",96:"Thunderstorm with small hail",99:"Thunderstorm with large hail"
+    95:"Thunderstorm",96:"Thunderstorm (small hail)",99:"Thunderstorm (large hail)"
   };
   return map[code] || "Cloudy";
+}
+function emojiForGroup(g) {
+  return g === "clear"   ? "☀️"
+       : g === "clouds"  ? "⛅"
+       : g === "rain"    ? "🌧️"
+       : g === "snow"    ? "🌨️"
+       : g === "thunder" ? "⛈️"
+       :                   "💨";
 }
 
 // ----- Recents -----
@@ -86,50 +92,40 @@ updateRecentUI();
 let compare = []; // { key, loc, data }
 
 function renderTable() {
-  // Set column count for CSS grid
   table.style.setProperty("--cols", String(compare.length));
-
-  // Build grid content
   table.innerHTML = "";
+
   if (compare.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "wx-row";
-    // one cell spanning whole grid
+    const row = document.createElement("div");
+    row.className = "wx-row";
     const cell = document.createElement("div");
     cell.className = "wx-cell";
     cell.style.gridColumn = `1 / span ${1 + compare.length}`;
     cell.textContent = "Add up to 3 locations to compare.";
-    table.appendChild(empty);
-    table.appendChild(cell);
+    table.append(row, cell);
     return;
   }
 
-  // Helper to add a row (label + value cells)
-  function addRow(label, getVal, animClassForCol = null, header = false) {
+  function addRow(label, getVal, bgClassForCol = null, header = false) {
     const row = document.createElement("div");
     row.className = "wx-row" + (header ? " wx-header" : "");
-    // Label cell
     const lab = document.createElement("div");
     lab.className = "wx-cell wx-label";
     lab.setAttribute("role", header ? "columnheader" : "rowheader");
     lab.textContent = label;
     row.appendChild(lab);
 
-    // Value cells
-    compare.forEach((entry, idx) => {
+    compare.forEach((entry) => {
       const cell = document.createElement("div");
-      cell.className = "wx-cell" + (animClassForCol ? ` wx-anim ${animClassForCol(entry, idx)}` : "");
+      cell.className = "wx-cell" + (bgClassForCol ? ` ${bgClassForCol(entry)}` : "");
       cell.setAttribute("role", header ? "columnheader" : "cell");
 
       const content = document.createElement("div");
       content.className = "wx-cell-inner";
 
       const val = getVal(entry);
-      if (val instanceof Node) {
-        content.appendChild(val);
-      } else {
-        content.textContent = val;
-      }
+      if (val instanceof Node) content.appendChild(val);
+      else content.textContent = val;
 
       cell.appendChild(content);
       row.appendChild(cell);
@@ -138,36 +134,40 @@ function renderTable() {
     table.appendChild(row);
   }
 
-  // Header row: Location name + remove buttons, also apply animation by weather group
+  // Header + emoji + remove button
   addRow("Metric", (entry) => {
     const wrap = document.createElement("div");
     wrap.className = "wx-colhead";
-    const h = document.createElement("span");
-    h.textContent = placeText(entry.loc);
+
+    const left = document.createElement("span");
+    const g = weatherGroup(entry.data.current_weather.weathercode);
+    left.innerHTML = `<span class="wx-emoji">${emojiForGroup(g)}</span>${placeText(entry.loc)}`;
+
     const btn = document.createElement("button");
     btn.className = "remove"; btn.title = "Remove";
     btn.setAttribute("aria-label", `Remove ${placeText(entry.loc)} from comparison`);
     btn.textContent = "×";
     btn.addEventListener("click", () => removeFromCompare(entry.key));
-    wrap.append(h, btn);
+
+    wrap.append(left, btn);
     return wrap;
-  }, (entry) => `anim-${weatherGroup(entry.data.current_weather.weathercode)}`, true);
+  }, (entry) => `bg-${weatherGroup(entry.data.current_weather.weathercode)}`, true);
 
   // Data rows
   addRow("Condition", (e) => weatherText(e.data.current_weather.weathercode),
-         (e) => `anim-${weatherGroup(e.data.current_weather.weathercode)}`);
+         (e) => `bg-${weatherGroup(e.data.current_weather.weathercode)}`);
   addRow("Temperature now", (e) => `${Math.round(e.data.current_weather.temperature)}°C`,
-         (e) => `anim-${weatherGroup(e.data.current_weather.weathercode)}`);
+         (e) => `bg-${weatherGroup(e.data.current_weather.weathercode)}`);
   addRow("Min today", (e) => `${Math.round(e.data.daily.temperature_2m_min[0])}°C`,
-         (e) => `anim-${weatherGroup(e.data.current_weather.weathercode)}`);
+         (e) => `bg-${weatherGroup(e.data.current_weather.weathercode)}`);
   addRow("Max today", (e) => `${Math.round(e.data.daily.temperature_2m_max[0])}°C`,
-         (e) => `anim-${weatherGroup(e.data.current_weather.weathercode)}`);
+         (e) => `bg-${weatherGroup(e.data.current_weather.weathercode)}`);
   addRow("Wind now", (e) => `${Math.round(e.data.current_weather.windspeed)} km/h`,
-         (e) => `anim-${weatherGroup(e.data.current_weather.weathercode)}`);
+         (e) => `bg-${weatherGroup(e.data.current_weather.weathercode)}`);
   addRow("Rain today", (e) => `${Math.round((e.data.daily.precipitation_sum[0] || 0) * 10) / 10} mm`,
-         (e) => `anim-${weatherGroup(e.data.current_weather.weathercode)}`);
+         (e) => `bg-${weatherGroup(e.data.current_weather.weathercode)}`);
   addRow("Local time", (e) => new Date(e.data.current_weather.time).toLocaleString(),
-         (e) => `anim-${weatherGroup(e.data.current_weather.weathercode)}`);
+         (e) => `bg-${weatherGroup(e.data.current_weather.weathercode)}`);
 }
 
 function removeFromCompare(key) {
