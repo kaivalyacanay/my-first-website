@@ -3,7 +3,9 @@ const form = document.getElementById("search-form");
 const cityInput = document.getElementById("city-input");
 const statusEl = document.getElementById("status");
 const useLocBtn = document.getElementById("use-location");
-const compareGrid = document.getElementById("compare");
+const clearAllBtn = document.getElementById("clear-all");
+const table = document.getElementById("wx-table");
+const tableWrap = document.getElementById("table-wrap");
 const recentWrap = document.getElementById("recent");
 const recentDataList = document.getElementById("recent-cities");
 
@@ -13,7 +15,6 @@ const RECENTS_KEY = "weather.recents.v1";
 // ----- Helpers -----
 function setStatus(msg) { statusEl.textContent = msg; }
 function clearStatus() { statusEl.textContent = ""; }
-
 function safeLoad(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); }
   catch { return fallback; }
@@ -24,8 +25,34 @@ function placeText(loc) {
   return `${loc.name}${loc.admin1 ? ", " + loc.admin1 : ""}${loc.country ? ", " + loc.country : ""}`.replace(/\s+/g, " ").trim();
 }
 function locKey(loc) {
-  // Key by rounded lat/lon to avoid duplicates from API noise
   return `${Math.round(loc.latitude*1000)},${Math.round(loc.longitude*1000)}`;
+}
+
+// Map WMO weather codes to coarse groups for animation & labels
+function weatherGroup(code) {
+  if ([0].includes(code)) return "clear";            // Clear sky
+  if ([1,2,3,45,48].includes(code)) return "clouds"; // Mainly clear/partly/overcast/fog
+  if ([51,53,55,56,57].includes(code)) return "rain"; // Drizzle (incl. freezing)
+  if ([61,63,65,66,67,80,81,82].includes(code)) return "rain"; // Rain/showers
+  if ([71,73,75,77,85,86].includes(code)) return "snow";       // Snow / snow grains
+  if ([95,96,99].includes(code)) return "thunder";             // Thunder
+  return "clouds";
+}
+function weatherText(code) {
+  const map = {
+    0:"Clear sky",1:"Mainly clear",2:"Partly cloudy",3:"Overcast",
+    45:"Fog",48:"Depositing rime fog",
+    51:"Light drizzle",53:"Moderate drizzle",55:"Dense drizzle",
+    56:"Freezing drizzle",57:"Freezing drizzle (dense)",
+    61:"Slight rain",63:"Moderate rain",65:"Heavy rain",
+    66:"Freezing rain (light)",67:"Freezing rain (heavy)",
+    71:"Slight snow",73:"Moderate snow",75:"Heavy snow",
+    77:"Snow grains",
+    80:"Slight rain showers",81:"Moderate rain showers",82:"Violent rain showers",
+    85:"Slight snow showers",86:"Heavy snow showers",
+    95:"Thunderstorm",96:"Thunderstorm with small hail",99:"Thunderstorm with large hail"
+  };
+  return map[code] || "Cloudy";
 }
 
 // ----- Recents -----
@@ -43,14 +70,11 @@ function updateRecentUI() {
   recentDataList.innerHTML = "";
   recents.forEach(loc => {
     const label = placeText(loc);
-
-    // clickable chip
     const btn = document.createElement("button");
     btn.type = "button"; btn.className = "chip"; btn.textContent = label;
     btn.addEventListener("click", () => addToCompareFlow(loc));
     recentWrap.appendChild(btn);
 
-    // datalist option
     const opt = document.createElement("option");
     opt.value = label;
     recentDataList.appendChild(opt);
@@ -59,75 +83,108 @@ function updateRecentUI() {
 updateRecentUI();
 
 // ----- Compare model (max 3) -----
-let compare = []; // array of { key, loc, data }
+let compare = []; // { key, loc, data }
 
-function renderCompare() {
-  compareGrid.innerHTML = "";
-  compare.forEach((entry, idx) => {
-    const card = document.createElement("article");
-    card.className = "card compare-card";
+function renderTable() {
+  // Set column count for CSS grid
+  table.style.setProperty("--cols", String(compare.length));
 
-    // header
-    const header = document.createElement("header");
-    const h2 = document.createElement("h2"); h2.textContent = placeText(entry.loc);
-    const removeBtn = document.createElement("button");
-    removeBtn.className = "remove"; removeBtn.title = "Remove";
-    removeBtn.setAttribute("aria-label", `Remove ${placeText(entry.loc)} from comparison`);
-    removeBtn.textContent = "×";
-    removeBtn.addEventListener("click", () => removeFromCompare(idx));
-    header.append(h2, removeBtn);
+  // Build grid content
+  table.innerHTML = "";
+  if (compare.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "wx-row";
+    // one cell spanning whole grid
+    const cell = document.createElement("div");
+    cell.className = "wx-cell";
+    cell.style.gridColumn = `1 / span ${1 + compare.length}`;
+    cell.textContent = "Add up to 3 locations to compare.";
+    table.appendChild(empty);
+    table.appendChild(cell);
+    return;
+  }
 
-    // current summary
-    const p = document.createElement("p");
-    p.className = "current";
-    const cw = entry.data.current_weather;
-    p.textContent = `Now: ${cw.temperature}°C, wind ${cw.windspeed} km/h at ${new Date(cw.time).toLocaleTimeString()}`;
+  // Helper to add a row (label + value cells)
+  function addRow(label, getVal, animClassForCol = null, header = false) {
+    const row = document.createElement("div");
+    row.className = "wx-row" + (header ? " wx-header" : "");
+    // Label cell
+    const lab = document.createElement("div");
+    lab.className = "wx-cell wx-label";
+    lab.setAttribute("role", header ? "columnheader" : "rowheader");
+    lab.textContent = label;
+    row.appendChild(lab);
 
-    // mini forecast (today + next 2 days)
-    const mini = document.createElement("ul");
-    mini.className = "mini";
-    const { daily } = entry.data;
-    const count = Math.min(3, daily?.time?.length || 0);
-    for (let i = 0; i < count; i++) {
-      const li = document.createElement("li");
-      const dayName = i === 0 ? "Today" : i === 1 ? "Tomorrow" : new Date(daily.time[i]).toLocaleDateString(undefined, { weekday: "short" });
-      const max = Math.round(daily.temperature_2m_max[i]);
-      const min = Math.round(daily.temperature_2m_min[i]);
-      const rain = Math.round((daily.precipitation_sum[i] || 0) * 10) / 10;
-      li.innerHTML = `
-        <span class="day">${dayName}</span>
-        <span class="temp">Max ${max}°C / Min ${min}°C</span>
-        <span class="rain">${rain} mm rain</span>
-      `;
-      mini.appendChild(li);
-    }
+    // Value cells
+    compare.forEach((entry, idx) => {
+      const cell = document.createElement("div");
+      cell.className = "wx-cell" + (animClassForCol ? ` wx-anim ${animClassForCol(entry, idx)}` : "");
+      cell.setAttribute("role", header ? "columnheader" : "cell");
 
-    card.append(header, p, mini);
-    compareGrid.appendChild(card);
-  });
+      const content = document.createElement("div");
+      content.className = "wx-cell-inner";
+
+      const val = getVal(entry);
+      if (val instanceof Node) {
+        content.appendChild(val);
+      } else {
+        content.textContent = val;
+      }
+
+      cell.appendChild(content);
+      row.appendChild(cell);
+    });
+
+    table.appendChild(row);
+  }
+
+  // Header row: Location name + remove buttons, also apply animation by weather group
+  addRow("Metric", (entry) => {
+    const wrap = document.createElement("div");
+    wrap.className = "wx-colhead";
+    const h = document.createElement("span");
+    h.textContent = placeText(entry.loc);
+    const btn = document.createElement("button");
+    btn.className = "remove"; btn.title = "Remove";
+    btn.setAttribute("aria-label", `Remove ${placeText(entry.loc)} from comparison`);
+    btn.textContent = "×";
+    btn.addEventListener("click", () => removeFromCompare(entry.key));
+    wrap.append(h, btn);
+    return wrap;
+  }, (entry) => `anim-${weatherGroup(entry.data.current_weather.weathercode)}`, true);
+
+  // Data rows
+  addRow("Condition", (e) => weatherText(e.data.current_weather.weathercode),
+         (e) => `anim-${weatherGroup(e.data.current_weather.weathercode)}`);
+  addRow("Temperature now", (e) => `${Math.round(e.data.current_weather.temperature)}°C`,
+         (e) => `anim-${weatherGroup(e.data.current_weather.weathercode)}`);
+  addRow("Min today", (e) => `${Math.round(e.data.daily.temperature_2m_min[0])}°C`,
+         (e) => `anim-${weatherGroup(e.data.current_weather.weathercode)}`);
+  addRow("Max today", (e) => `${Math.round(e.data.daily.temperature_2m_max[0])}°C`,
+         (e) => `anim-${weatherGroup(e.data.current_weather.weathercode)}`);
+  addRow("Wind now", (e) => `${Math.round(e.data.current_weather.windspeed)} km/h`,
+         (e) => `anim-${weatherGroup(e.data.current_weather.weathercode)}`);
+  addRow("Rain today", (e) => `${Math.round((e.data.daily.precipitation_sum[0] || 0) * 10) / 10} mm`,
+         (e) => `anim-${weatherGroup(e.data.current_weather.weathercode)}`);
+  addRow("Local time", (e) => new Date(e.data.current_weather.time).toLocaleString(),
+         (e) => `anim-${weatherGroup(e.data.current_weather.weathercode)}`);
 }
 
-function removeFromCompare(idx) {
-  compare.splice(idx, 1);
-  renderCompare();
+function removeFromCompare(key) {
+  compare = compare.filter(e => e.key !== key);
+  renderTable();
 }
 
 async function addToCompareFlow(loc) {
   try {
-    if (compare.length >= 3) {
-      setStatus("Comparison is full (3). Remove one to add another.");
-      return;
-    }
+    if (compare.length >= 3) { setStatus("Comparison is full (3). Remove one to add another."); return; }
     setStatus(`Fetching weather for ${placeText(loc)}…`);
     const data = await fetchWeather(loc.latitude, loc.longitude);
     const key = locKey(loc);
-    if (compare.some(e => e.key === key)) {
-      setStatus("That place is already in the comparison.");
-      return;
-    }
+    if (compare.some(e => e.key === key)) { setStatus("That place is already in the comparison."); return; }
     compare.push({ key, loc, data });
     addRecent(loc);
-    renderCompare();
+    renderTable();
     clearStatus();
   } catch (err) {
     console.error(err);
@@ -156,7 +213,6 @@ async function fetchWeather(lat, lon) {
 }
 
 // ----- Events -----
-// Search/add to compare
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const q = cityInput.value.trim();
@@ -179,16 +235,9 @@ form.addEventListener("submit", async (e) => {
   }
 });
 
-// Use my location
 useLocBtn.addEventListener("click", () => {
-  if (!navigator.geolocation) {
-    setStatus("Geolocation is not supported by your browser.");
-    return;
-  }
-  if (compare.length >= 3) {
-    setStatus("Comparison is full (3). Remove one to add another.");
-    return;
-  }
+  if (!navigator.geolocation) { setStatus("Geolocation is not supported by your browser."); return; }
+  if (compare.length >= 3) { setStatus("Comparison is full (3). Remove one to add another."); return; }
   setStatus("Getting your location…");
   navigator.geolocation.getCurrentPosition(async (pos) => {
     try {
@@ -203,3 +252,14 @@ useLocBtn.addEventListener("click", () => {
     setStatus(err.code === 1 ? "Permission denied. Please allow location access." : "Unable to retrieve your location.");
   }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
 });
+
+clearAllBtn.addEventListener("click", () => {
+  if (compare.length === 0) return;
+  compare = [];
+  renderTable();
+  setStatus("Cleared all compared places.");
+  setTimeout(clearStatus, 1200);
+});
+
+// ----- Initial -----
+renderTable();

@@ -2,13 +2,13 @@
 :root { --radius: 12px; --bg: #fafafa; --fg: #111; --border: #e5e5e5; --muted: #666; }
 body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: var(--fg); }
 .container { max-width: 1100px; margin: 48px auto; padding: 0 16px; }
-
 h1 { margin: 0 0 16px; }
 
-/* Form: input + 2 buttons */
-form { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; margin-bottom: 12px; }
+/* Form: input + 3 buttons */
+form { display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px; margin-bottom: 12px; }
 input { padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); }
 button { padding: 10px 14px; border: 0; border-radius: var(--radius); background: #111; color: #fff; cursor: pointer; }
+#clear-all { background: #b02a37; } /* subtle 'danger' look */
 
 .status { min-height: 24px; color: var(--muted); margin: 8px 0 12px; }
 
@@ -17,58 +17,119 @@ button { padding: 10px 14px; border: 0; border-radius: var(--radius); background
 .chip { padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border); background: #fff; color: inherit; cursor: pointer; }
 .chip:focus-visible { outline: 3px solid #5b9dff; outline-offset: 2px; }
 
-/* Comparison grid */
-.compare-grid {
+/* Table-like grid */
+.wx-wrap { position: relative; }
+.wx-table {
+  --cols: 0; /* set dynamically: number of location columns */
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-}
-
-/* Comparison card */
-.card {
+  grid-template-columns: 170px repeat(var(--cols), 1fr);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  overflow: hidden;
   background: #fff;
-  padding: 14px;
 }
-.card header {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 10px; margin-bottom: 8px;
+.wx-row { display: contents; } /* each row is a set of cells across the grid */
+
+.wx-cell {
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  padding: 10px 12px;
+  position: relative; /* for animated overlays */
+  min-height: 52px;
 }
-.card h2 { font-size: 1.1rem; margin: 0; }
+.wx-cell:last-child { border-right: 0; }
+
+.wx-label { background: #f8f8f8; font-weight: 600; color: #333; }
+.wx-header .wx-cell { font-weight: 700; }
+.wx-colhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .remove {
   background: transparent; color: inherit; border: 1px solid var(--border);
   border-radius: 999px; width: 28px; height: 28px; line-height: 26px; text-align: center; cursor: pointer;
 }
-.current { margin: 6px 0 10px; color: var(--fg); }
 
-/* 3-day mini forecast */
-.mini {
-  list-style: none; padding: 0; margin: 0;
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+/* Animated column backgrounds (applied to each location cell) */
+.wx-anim { isolation: isolate; }
+.wx-anim::before {
+  content: "";
+  position: absolute; inset: 0; z-index: 0;
+  opacity: 0.16; pointer-events: none;
+  background: none;
 }
-.mini li {
-  border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; background: #fff;
-  display: grid; gap: 4px; font-size: 0.95rem;
+/* Clear / sunny — slow rotating rays (very subtle) */
+.anim-clear::before {
+  background:
+    radial-gradient(circle at 85% 10%, rgba(255,200,0,.45), transparent 40%),
+    conic-gradient(from 0deg at 85% 10%, rgba(255,220,0,.45), transparent 35%, rgba(255,220,0,.45) 36% 37%, transparent 38% 100%);
+  animation: spin 24s linear infinite;
 }
-.mini .day { font-weight: 600; }
-.mini .temp { color: var(--fg); }
-.mini .rain { color: var(--muted); }
+@keyframes spin { to { transform: rotate(1turn); } }
+
+/* Clouds — drifting horizontal haze */
+.anim-clouds::before {
+  background:
+    repeating-linear-gradient( to right, rgba(200,200,210,.35) 0 40px, rgba(230,230,238,.35) 40px 80px );
+  animation: drift 18s linear infinite;
+}
+@keyframes drift { to { background-position-x: 240px; } }
+
+/* Rain — falling streaks */
+.anim-rain::before {
+  background:
+    repeating-linear-gradient( 170deg, rgba(70,120,255,.45) 0 2px, transparent 2px 10px );
+  animation: rain 1.2s linear infinite;
+}
+@keyframes rain { to { background-position: 0 24px; } }
+
+/* Snow — soft falling dots */
+.anim-snow::before {
+  background:
+    radial-gradient(circle, rgba(255,255,255,.9) 0 2px, transparent 3px) 0 0/20px 20px,
+    radial-gradient(circle, rgba(255,255,255,.7) 0 2px, transparent 3px) 10px 10px/22px 22px;
+  animation: snow 4s linear infinite;
+}
+@keyframes snow { to { background-position: 0 40px, 10px 50px; } }
+
+/* Wind — diagonal streaks */
+.anim-wind::before {
+  background:
+    repeating-linear-gradient( -10deg, rgba(150,150,160,.35) 0 3px, transparent 3px 14px );
+  animation: wind 3s linear infinite;
+}
+@keyframes wind { to { background-position: 240px 0; } }
+
+/* Thunder — occasional flash */
+.anim-thunder::before {
+  background:
+    repeating-linear-gradient( to right, rgba(80,80,90,.35) 0 80px, rgba(100,100,110,.35) 80px 160px );
+  animation: storm 10s linear infinite;
+}
+@keyframes storm {
+  0%, 97%, 100% { filter: brightness(1); }
+  98% { filter: brightness(2.2); }
+  99% { filter: brightness(0.8); }
+}
+
+/* Ensure text content sits above the overlay */
+.wx-cell > * { position: relative; z-index: 1; }
 
 /* Responsive */
 @media (max-width: 980px) {
-  .compare-grid { grid-template-columns: repeat(2, 1fr); }
+  .wx-table { grid-template-columns: 140px repeat(var(--cols), 1fr); }
 }
 @media (max-width: 560px) {
   .container { margin: 24px auto; }
   form { grid-template-columns: 1fr; }
-  .compare-grid { grid-template-columns: 1fr; }
+  /* Horizontal scroll for narrow screens */
+  .wx-table { overflow: auto; display: block; }
+  .wx-row { display: grid; grid-template-columns: 140px repeat(var(--cols), 220px); }
 }
 
 /* Dark mode */
 @media (prefers-color-scheme: dark) {
   :root { --bg: #0f0f10; --fg: #e9e9ea; --border: #2a2a2e; --muted: #b6b6bc; }
-  .card, .chip { background: #18181a; }
+  .wx-table { background: #18181a; }
+  .wx-label { background: #1f1f22; color: #e2e2e7; }
   input { background: #18181a; color: var(--fg); border-color: var(--border); }
   button { background: #e9e9ea; color: #0f0f10; }
+  .chip { background: #18181a; border-color: var(--border); }
 }

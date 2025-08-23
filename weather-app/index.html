@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Weather Compare</title>
-  <link rel="stylesheet" href="style.css?v=3" />
+  <link rel="stylesheet" href="style.css?v=4" />
 </head>
 <body>
   <main class="container">
@@ -14,6 +14,7 @@
       <input id="city-input" type="text" placeholder="Enter a city (e.g., Mumbai)" aria-label="City" list="recent-cities" required />
       <button type="submit" title="Add to comparison">Add</button>
       <button id="use-location" type="button" title="Use my current location">Use my location</button>
+      <button id="clear-all" type="button" title="Remove all compared places">Clear all</button>
     </form>
 
     <div id="recent" class="recent" aria-label="Recent searches"></div>
@@ -21,10 +22,12 @@
 
     <section id="status" class="status" aria-live="polite"></section>
 
-    <!-- New comparison grid -->
-    <section id="compare" class="compare-grid" aria-label="Comparison grid"></section>
+    <!-- Table-like comparison: labels as rows, locations as columns -->
+    <section id="table-wrap" class="wx-wrap">
+      <div id="wx-table" class="wx-table" role="table" aria-label="Weather comparison table"></div>
+    </section>
   </main>
 
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
