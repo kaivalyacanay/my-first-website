@@ -11,17 +11,19 @@
     <h1>To-Do</h1>
 
     <form id="todo-form" autocomplete="off">
-      <input id="todo-input" type="text" placeholder="Add a task…" required />
+      <input id="todo-input" type="text" placeholder="Add a task…" aria-label="Task name" required />
       <button type="submit">Add</button>
     </form>
 
-    <ul id="todo-list" class="list"></ul>
+    <div id="counts" class="counts" aria-live="polite"></div>
 
-    <div class="controls">
-      <button data-filter="all">All</button>
-      <button data-filter="active">Active</button>
-      <button data-filter="done">Done</button>
-      <button id="clear-done">Clear Done</button>
+    <ul id="todo-list" class="list" role="list" aria-live="polite"></ul>
+
+    <div class="controls" role="toolbar" aria-label="Filters">
+      <button data-filter="all" aria-pressed="true">All</button>
+      <button data-filter="active" aria-pressed="false">Active</button>
+      <button data-filter="done" aria-pressed="false">Done</button>
+      <button id="clear-done" type="button" title="Clear completed tasks">Clear Done</button>
     </div>
   </main>
 
