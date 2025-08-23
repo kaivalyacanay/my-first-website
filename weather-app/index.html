@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Weather</title>
+  <link rel="stylesheet" href="style.css?v=1" />
+</head>
+<body>
+  <main class="container">
+    <h1>Weather</h1>
+
+    <form id="search-form" autocomplete="off">
+      <input id="city-input" type="text" placeholder="Enter a city (e.g., Mumbai)" aria-label="City" required />
+      <button type="submit">Search</button>
+    </form>
+
+    <section id="status" class="status" aria-live="polite"></section>
+
+    <section id="current" class="card" hidden>
+      <h2 id="place"></h2>
+      <p id="current-summary"></p>
+    </section>
+
+    <section id="forecast" class="card" hidden>
+      <h3>Next 7 days</h3>
+      <ul id="daily-list" class="list"></ul>
+    </section>
+  </main>
+
+  <script src="app.js?v=1"></script>
+</body>
+</html>
