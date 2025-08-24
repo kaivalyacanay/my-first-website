@@ -7,11 +7,9 @@ const clearAllBtn = document.getElementById("clear-all");
 const table = document.getElementById("wx-table");
 const recentWrap = document.getElementById("recent");
 const recentDataList = document.getElementById("recent-cities");
-const animToggle = document.getElementById("anim-toggle");
 
 // ----- Query flags -----
 const urlParams = new URLSearchParams(location.search);
-const forceAnim = urlParams.get("anim") === "force";
 const demo = urlParams.get("demo") === "1";
 
 // ----- Storage keys -----
@@ -25,7 +23,6 @@ function save(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 function isNode(n) { return n && (n.nodeType === 1 || n.nodeType === 11); }
 function placeText(loc) { return `${loc.name}${loc.admin1 ? ", " + loc.admin1 : ""}${loc.country ? ", " + loc.country : ""}`.replace(/\s+/g, " ").trim(); }
 function locKey(loc) { return `${Math.round(loc.latitude*1000)},${Math.round(loc.longitude*1000)}`; }
-function animationsWanted() { return animToggle ? animToggle.checked : true; }
 
 // ----- Weather mapping -----
 function weatherGroup(code) {
@@ -122,31 +119,6 @@ function fallbackIcon(group) {
   return wrap;
 }
 
-// ----- Lottie loader -----
-function lottieAvailable() { return !!(window.lottie && typeof window.lottie.loadAnimation === "function"); }
-function loadScriptOnce(src) {
-  return new Promise((resolve) => {
-    const s = document.createElement("script");
-    s.src = src; s.async = true; s.crossOrigin = "anonymous";
-    s.onload = () => resolve(true);
-    s.onerror = () => resolve(false);
-    document.head.appendChild(s);
-    setTimeout(() => resolve(lottieAvailable()), 4000);
-  });
-}
-let lottieTried = false;
-async function ensureLottie() {
-  if (lottieAvailable()) return true;
-  if (lottieTried) return false;
-  lottieTried = true;
-  const sources = [
-    "https://cdn.jsdelivr.net/npm/lottie-web@5.12.2/build/player/lottie.min.js",
-    "https://unpkg.com/lottie-web@5.12.2/build/player/lottie.min.js",
-    "https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"
-  ];
-  for (const url of sources) { if (await loadScriptOnce(url)) return true; }
-  return lottieAvailable();
-}
 
 // ----- Recents -----
 let recents = safeLoad(RECENTS_KEY, []);
@@ -171,24 +143,7 @@ function updateRecentUI() {
 updateRecentUI();
 
 // ----- Compare model -----
-let compare = []; // { key, loc, data, animBox, anim? }
-
-// Small embedded Lottie JSONs
-const LOT = {
-  clear: {"v":"5.7.6","fr":60,"ip":0,"op":120,"w":200,"h":125,"nm":"sun-pulse","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"sun","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,62,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":1,"k":[{"t":0,"s":[100,100,100]},{"t":60,"s":[110,110,100]},{"t":120,"s":[100,100,100]}]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[52,52]},"d":1},{"ty":"fl","c":{"a":0,"k":[1,0.72,0,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]},"a":{"a":0,"k":[0,0]},"s":{"a":0,"k":[100,100]},"r":{"a":0,"k":0},"o":{"a":0,"k":100}}]}],"ip":0,"op":120,"st":0,"bm":0}]},
-  clouds: {"v":"5.7.6","fr":60,"ip":0,"op":120,"w":200,"h":125,"nm":"cloud-drift","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"cloud","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":0,"s":[100,60,0]},{"t":60,"s":[112,60,0]},{"t":120,"s":[100,60,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[-22,0]},"s":{"a":0,"k":[50,35]}},{"ty":"el","p":{"a":0,"k":[10,-8]},"s":{"a":0,"k":[60,40]}},{"ty":"rc","p":{"a":0,"k":[0,8]},"s":{"a":0,"k":[90,30]},"r":{"a":0,"k":15}},{"ty":"fl","c":{"a":0,"k":[0.78,0.82,0.88,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}],"ip":0,"op":120,"st":0,"bm":0}]},
-  rain: {"v":"5.7.6","fr":60,"ip":0,"op":120,"w":200,"h":125,"nm":"rain","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"cloud","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,55,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[-20,0]},"s":{"a":0,"k":[50,35]}},{"ty":"el","p":{"a":0,"k":[10,-8]},"s":{"a":0,"k":[60,40]}},{"ty":"rc","p":{"a":0,"k":[0,8]},"s":{"a":0,"k":[90,30]},"r":{"a":0,"k":15}},{"ty":"fl","c":{"a":0,"k":[0.78,0.82,0.88,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]},{"ddd":0,"ind":2,"ty":4,"nm":"drop1","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":0,"s":[80,75,0]},{"t":90,"s":[80,110,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"rc","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[4,14]},"r":{"a":0,"k":2}},{"ty":"fl","c":{"a":0,"k":[0.35,0.55,0.93,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]},{"ddd":0,"ind":3,"ty":4,"nm":"drop2","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":10,"s":[100,75,0]},{"t":100,"s":[100,110,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"rc","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[4,14]},"r":{"a":0,"k":2}},{"ty":"fl","c":{"a":0,"k":[0.35,0.55,0.93,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]},{"ddd":0,"ind":4,"ty":4,"nm":"drop3","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":20,"s":[120,75,0]},{"t":110,"s":[120,110,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"rc","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[4,14]},"r":{"a":0,"k":2}},{"ty":"fl","c":{"a":0,"k":[0.35,0.55,0.93,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]}]},
-  snow: {"v":"5.7.6","fr":60,"ip":0,"op":120,"w":200,"h":125,"nm":"snow","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"cloud","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,55,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[-20,0]},"s":{"a":0,"k":[50,35]}},{"ty":"el","p":{"a":0,"k":[10,-8]},"s":{"a":0,"k":[60,40]}},{"ty":"rc","p":{"a":0,"k":[0,8]},"s":{"a":0,"k":[90,30]},"r":{"a":0,"k":15}},{"ty":"fl","c":{"a":0,"k":[0.78,0.82,0.88,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]},{"ddd":0,"ind":2,"ty":4,"nm":"flake1","sr":1,"ks":{"o":{"a":1,"k":[{"t":0,"s":0},{"t":10,"s":100},{"t":100,"s":0}]},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":0,"s":[85,75,0]},{"t":100,"s":[90,110,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[6,6]}},{"ty":"fl","c":{"a":0,"k":[1,1,1,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]},{"ddd":0,"ind":3,"ty":4,"nm":"flake2","sr":1,"ks":{"o":{"a":1,"k":[{"t":0,"s":0},{"t":20,"s":100},{"t":110,"s":0}]},"r":{"a":0,"k":0},"p":{"a":1,"k":[{"t":0,"s":[105,75,0]},{"t":100,"s":[110,110,0]}]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[0,0]},"s":{"a":0,"k":[6,6]}},{"ty":"fl","c":{"a":0,"k":[1,1,1,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]}]},
-  thunder: {"v":"5.7.6","fr":60,"ip":0,"op":120,"w":200,"h":125,"nm":"thunder","ddd":0,"assets":[],"layers":[{"ddd":0,"ind":1,"ty":4,"nm":"cloud","sr":1,"ks":{"o":{"a":0,"k":100},"r":{"a":0,"k":0},"p":{"a":0,"k":[100,55,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"el","p":{"a":0,"k":[-20,0]},"s":{"a":0,"k":[50,35]}},{"ty":"el","p":{"a":0,"k":[10,-8]},"s":{"a":0,"k":[60,40]}},{"ty":"rc","p":{"a":0,"k":[0,8]},"s":{"a":0,"k":[90,30]},"r":{"a":0,"k":15}},{"ty":"fl","c":{"a":0,"k":[0.71,0.69,0.85,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]},{"ddd":0,"ind":2,"ty":4,"nm":"bolt","sr":1,"ks":{"o":{"a":1,"k":[{"t":0,"s":0},{"t":90,"s":0},{"t":95,"s":100},{"t":105,"s":40},{"t":120,"s":0}]},"r":{"a":0,"k":0},"p":{"a":0,"k":[120,90,0]},"a":{"a":0,"k":[0,0,0]},"s":{"a":0,"k":[100,100,100]}},"shapes":[{"ty":"gr","it":[{"ty":"sh","ks":{"a":0,"k":{"i":[],"o":[],"v":[[0,-10],[-6,8],[4,8],[-2,26],[8,10],[0,10]],"c":true}}},{"ty":"fl","c":{"a":0,"k":[0.97,0.91,0.11,1]},"o":{"a":0,"k":100}},{"ty":"tr","p":{"a":0,"k":[0,0]}}]}]}]}
-};
-LOT.wind = LOT.clouds;
-
-function lottieUpgrade(entry, animBox, group) {
-  const data = LOT[group] || LOT.clouds;
-  try {
-    entry.anim = window.lottie.loadAnimation({ container: animBox, renderer: "svg", loop: true, autoplay: true, animationData: data });
-  } catch (e) { entry.anim = null; }
-}
+let compare = []; // { key, loc, data }
 
 function renderTable() {
   table.style.setProperty("--cols", String(compare.length));
@@ -224,13 +179,13 @@ function renderTable() {
     table.appendChild(row);
   }
 
-  // Header row: static SVG now, Lottie upgrade if enabled & available
+  // Header row with static SVG icons
   addRow("Metric", (entry) => {
     const wrap = document.createElement("div"); wrap.className = "wx-head";
-    const animBox = document.createElement("div"); animBox.className = "wx-animbox";
+    const iconBox = document.createElement("div"); iconBox.className = "wx-animbox";
 
     const g = weatherGroup(entry.data.current_weather.weathercode);
-    animBox.appendChild(fallbackIcon(g)); // always visible
+    iconBox.appendChild(fallbackIcon(g));
 
     const bar = document.createElement("div"); bar.className = "wx-headbar"; bar.textContent = placeText(entry.loc);
     const btn = document.createElement("button"); btn.className = "remove"; btn.title = "Remove";
@@ -238,25 +193,7 @@ function renderTable() {
     btn.textContent = "×"; btn.addEventListener("click", () => removeFromCompare(entry.key));
     bar.appendChild(btn);
 
-    wrap.append(animBox, bar);
-
-    // Save ref & try to animate
-    entry.animBox = animBox;
-    entry.anim && entry.anim.destroy && entry.anim.destroy();
-    entry.anim = null;
-
-    if (animationsWanted()) {
-      if (lottieAvailable()) {
-        animBox.innerHTML = ""; lottieUpgrade(entry, animBox, g);
-      } else {
-        ensureLottie().then((ok) => {
-          if (ok && compare.find(e => e.key === entry.key) && entry.animBox && animationsWanted()) {
-            entry.animBox.innerHTML = ""; lottieUpgrade(entry, entry.animBox, g);
-          }
-        });
-      }
-    }
-
+    wrap.append(iconBox, bar);
     return wrap;
   }, true);
 
@@ -269,14 +206,12 @@ function renderTable() {
   addRow("Rain today", (e) => `${Math.round((e.data.daily.precipitation_sum[0] || 0) * 10) / 10} mm`);
   addRow("Local time", (e) => new Date(e.data.current_weather.time).toLocaleString());
 
-  // Show quick status (helps diagnose)
-  setStatus(`Animations: ${animationsWanted() ? "ON" : "OFF"} • Lottie ${lottieAvailable() ? "loaded" : "not loaded yet"}`);
 }
 
 function removeFromCompare(key) {
   const idx = compare.findIndex(e => e.key === key);
-  if (idx !== -1 && compare[idx].anim && compare[idx].anim.destroy) compare[idx].anim.destroy();
-  compare.splice(idx, 1); renderTable();
+  if (idx !== -1) compare.splice(idx, 1);
+  renderTable();
 }
 
 // ----- API -----
@@ -306,7 +241,7 @@ async function addToCompareFlow(loc) {
     const data = await fetchWeather(loc.latitude, loc.longitude);
     const key = locKey(loc);
     if (compare.some(e => e.key === key)) { setStatus("That place is already in the comparison."); return; }
-    compare.push({ key, loc, data, anim: null, animBox: null });
+    compare.push({ key, loc, data });
     addRecent(loc); renderTable(); clearStatus();
   } catch (err) { console.error(err); setStatus("Could not fetch weather for that place."); }
 }
@@ -340,11 +275,12 @@ useLocBtn.addEventListener("click", () => {
 });
 
 clearAllBtn.addEventListener("click", () => {
-  compare.forEach(e => e.anim && e.anim.destroy && e.anim.destroy());
-  compare = []; renderTable(); setStatus("Cleared all compared places."); setTimeout(clearStatus, 1200);
+  compare = [];
+  renderTable();
+  setStatus("Cleared all compared places.");
+  setTimeout(clearStatus, 1200);
 });
 
-animToggle?.addEventListener("change", () => { renderTable(); });
 
 // ----- Demo mode -----
 async function bootDemo() {
@@ -356,14 +292,14 @@ async function bootDemo() {
   for (const s of samples) {
     try {
       const data = await fetchWeather(s.latitude, s.longitude);
-      compare.push({ key: locKey(s), loc: s, data, anim: null, animBox: null });
+      compare.push({ key: locKey(s), loc: s, data });
     } catch {
       const now = new Date().toISOString();
       const data = {
         current_weather: { weathercode: s.demoCode, temperature: 26, windspeed: 9, time: now },
         daily: { temperature_2m_min: [22], temperature_2m_max: [31], precipitation_sum: [3] }
       };
-      compare.push({ key: locKey(s), loc: s, data, anim: null, animBox: null });
+      compare.push({ key: locKey(s), loc: s, data });
     }
   }
   renderTable();
