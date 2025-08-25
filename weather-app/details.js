@@ -4,7 +4,7 @@ const lon = parseFloat(params.get('lon'));
 const place = params.get('place') || 'Location';
 
 const titleEl = document.getElementById('title');
-const dailyImg = document.getElementById('daily-chart');
+const dailyWidget = document.getElementById('daily-widget');
 const hourlyImg = document.getElementById('hourly-chart');
 const toggleBtn = document.getElementById('unit-toggle');
 
@@ -13,34 +13,20 @@ let weatherData = null;
 
 titleEl.textContent = `Weather details for ${place}`;
 
-
-function renderDaily() {
-  const d = weatherData.daily;
-  const labels = d.time;
-  const maxTemps = d.temperature_2m_max.map(t => unit === 'C' ? t : t * 9 / 5 + 32);
-  const minTemps = d.temperature_2m_min.map(t => unit === 'C' ? t : t * 9 / 5 + 32);
-  const config = {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: `Max Temp (°${unit})`,
-          data: maxTemps,
-          borderColor: 'red',
-          tension: 0.1
-        },
-        {
-          label: `Min Temp (°${unit})`,
-          data: minTemps,
-          borderColor: 'blue',
-          tension: 0.1
-        }
-      ]
-    }
-  };
-  const url = 'https://quickchart.io/chart?width=600&height=300&c=' + encodeURIComponent(JSON.stringify(config));
-  dailyImg.src = url;
+function setupWidget() {
+  const latAbs = Math.abs(lat).toFixed(2).split('.');
+  const lonAbs = Math.abs(lon).toFixed(2).split('.');
+  const latDir = lat >= 0 ? 'n' : 's';
+  const lonDir = lon >= 0 ? 'e' : 'w';
+  const locPath = `${latAbs[0]}d${latAbs[1]}${latDir}${lonAbs[0]}d${lonAbs[1]}${lonDir}`;
+  const slug = place.toLowerCase().replace(/\s+/g, '-');
+  dailyWidget.href = `https://forecast7.com/en/${locPath}/${slug}/`;
+  dailyWidget.textContent = `${place} Weather`;
+  dailyWidget.setAttribute('data-label_1', place);
+  dailyWidget.setAttribute('data-label_2', 'WEATHER');
+  dailyWidget.setAttribute('data-days', '5');
+  dailyWidget.setAttribute('data-theme', 'pure');
+  if (window.__weatherwidget_init) window.__weatherwidget_init();
 }
 
 function renderHourly() {
@@ -74,7 +60,6 @@ function renderHourly() {
 }
 
 function render() {
-  renderDaily();
   renderHourly();
   toggleBtn.textContent = unit === 'C' ? 'Show °F' : 'Show °C';
 }
@@ -89,7 +74,6 @@ async function fetchDetails() {
     latitude: lat,
     longitude: lon,
     timezone: 'auto',
-    daily: 'temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max,winddirection_10m_dominant',
     hourly: 'temperature_2m,precipitation,windspeed_10m,winddirection_10m',
     forecast_days: '5'
   });
@@ -98,4 +82,5 @@ async function fetchDetails() {
   render();
 }
 
+setupWidget();
 fetchDetails();
