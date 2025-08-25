@@ -4,43 +4,81 @@ const lon = parseFloat(params.get('lon'));
 const place = params.get('place') || 'Location';
 
 const titleEl = document.getElementById('title');
-const dailyTable = document.getElementById('daily-table');
-const hourlyTable = document.getElementById('hourly-table');
+const dailyCanvas = document.getElementById('daily-chart');
+const hourlyCanvas = document.getElementById('hourly-chart');
 const toggleBtn = document.getElementById('unit-toggle');
 
 let unit = 'C';
 let weatherData = null;
+let dailyChart = null;
+let hourlyChart = null;
 
 titleEl.textContent = `Weather details for ${place}`;
 
-function formatTemp(c) {
-  return unit === 'C' ? `${Math.round(c)}°C` : `${Math.round(c * 9 / 5 + 32)}°F`;
-}
-
-function dirText(deg) {
-  const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-  return dirs[Math.round(deg / 45) % 8];
-}
 
 function renderDaily() {
   const d = weatherData.daily;
-  let html = '<tr><th>Date</th><th>Min</th><th>Max</th><th>Rain (mm)</th><th>Wind (km/h)</th><th>Dir</th></tr>';
-  for (let i = 0; i < d.time.length; i++) {
-    html += `<tr><td>${d.time[i]}</td><td>${formatTemp(d.temperature_2m_min[i])}</td><td>${formatTemp(d.temperature_2m_max[i])}</td><td>${Math.round(d.precipitation_sum[i] * 10) / 10}</td><td>${Math.round(d.windspeed_10m_max[i])}</td><td>${dirText(d.winddirection_10m_dominant[i])}</td></tr>`;
-  }
-  dailyTable.innerHTML = html;
+  const labels = d.time;
+  const maxTemps = d.temperature_2m_max.map(t => unit === 'C' ? t : t * 9 / 5 + 32);
+  const minTemps = d.temperature_2m_min.map(t => unit === 'C' ? t : t * 9 / 5 + 32);
+  if (dailyChart) dailyChart.destroy();
+  dailyChart = new Chart(dailyCanvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: `Max Temp (°${unit})`,
+          data: maxTemps,
+          borderColor: 'red',
+          tension: 0.1
+        },
+        {
+          label: `Min Temp (°${unit})`,
+          data: minTemps,
+          borderColor: 'blue',
+          tension: 0.1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
 }
 
 function renderHourly() {
   const h = weatherData.hourly;
-  let html = '<tr><th>Time</th><th>Temp</th><th>Rain (mm)</th><th>Wind (km/h)</th><th>Dir</th></tr>';
   const now = Date.now();
   let start = 0;
   while (start < h.time.length && new Date(h.time[start]).getTime() < now) start++;
+  const labels = [];
+  const temps = [];
   for (let i = start; i < start + 24 && i < h.time.length; i++) {
-    html += `<tr><td>${h.time[i]}</td><td>${formatTemp(h.temperature_2m[i])}</td><td>${Math.round(h.precipitation[i] * 10) / 10}</td><td>${Math.round(h.windspeed_10m[i])}</td><td>${dirText(h.winddirection_10m[i])}</td></tr>`;
+    labels.push(h.time[i].split('T')[1]);
+    const t = h.temperature_2m[i];
+    temps.push(unit === 'C' ? t : t * 9 / 5 + 32);
   }
-  hourlyTable.innerHTML = html;
+  if (hourlyChart) hourlyChart.destroy();
+  hourlyChart = new Chart(hourlyCanvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: `Temp (°${unit})`,
+          data: temps,
+          borderColor: 'orange',
+          tension: 0.1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
 }
 
 function render() {
