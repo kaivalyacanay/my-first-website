@@ -187,11 +187,15 @@ function renderTable() {
     const g = weatherGroup(entry.data.current_weather.weathercode);
     iconBox.appendChild(fallbackIcon(g));
 
-    const bar = document.createElement("div"); bar.className = "wx-headbar"; bar.textContent = placeText(entry.loc);
+    const bar = document.createElement("div"); bar.className = "wx-headbar";
+    const link = document.createElement("a");
+    link.href = `details.html?lat=${entry.loc.latitude}&lon=${entry.loc.longitude}&place=${encodeURIComponent(placeText(entry.loc))}`;
+    link.textContent = placeText(entry.loc);
+    link.title = `View detailed forecast for ${placeText(entry.loc)}`;
     const btn = document.createElement("button"); btn.className = "remove"; btn.title = "Remove";
     btn.setAttribute("aria-label", `Remove ${placeText(entry.loc)} from comparison`);
     btn.textContent = "×"; btn.addEventListener("click", () => removeFromCompare(entry.key));
-    bar.appendChild(btn);
+    bar.append(link, btn);
 
     wrap.append(iconBox, bar);
     return wrap;
