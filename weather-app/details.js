@@ -4,14 +4,12 @@ const lon = parseFloat(params.get('lon'));
 const place = params.get('place') || 'Location';
 
 const titleEl = document.getElementById('title');
-const dailyCanvas = document.getElementById('daily-chart');
-const hourlyCanvas = document.getElementById('hourly-chart');
+const dailyImg = document.getElementById('daily-chart');
+const hourlyImg = document.getElementById('hourly-chart');
 const toggleBtn = document.getElementById('unit-toggle');
 
 let unit = 'C';
 let weatherData = null;
-let dailyChart = null;
-let hourlyChart = null;
 
 titleEl.textContent = `Weather details for ${place}`;
 
@@ -21,9 +19,7 @@ function renderDaily() {
   const labels = d.time;
   const maxTemps = d.temperature_2m_max.map(t => unit === 'C' ? t : t * 9 / 5 + 32);
   const minTemps = d.temperature_2m_min.map(t => unit === 'C' ? t : t * 9 / 5 + 32);
-  if (dailyChart) dailyChart.destroy();
-  dailyCanvas.height = 150;
-  dailyChart = new Chart(dailyCanvas, {
+  const config = {
     type: 'line',
     data: {
       labels,
@@ -41,12 +37,10 @@ function renderDaily() {
           tension: 0.1
         }
       ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false
     }
-  });
+  };
+  const url = 'https://quickchart.io/chart?width=600&height=300&c=' + encodeURIComponent(JSON.stringify(config));
+  dailyImg.src = url;
 }
 
 function renderHourly() {
@@ -61,9 +55,7 @@ function renderHourly() {
     const t = h.temperature_2m[i];
     temps.push(unit === 'C' ? t : t * 9 / 5 + 32);
   }
-  if (hourlyChart) hourlyChart.destroy();
-  hourlyCanvas.height = 150;
-  hourlyChart = new Chart(hourlyCanvas, {
+  const config = {
     type: 'line',
     data: {
       labels,
@@ -75,12 +67,10 @@ function renderHourly() {
           tension: 0.1
         }
       ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false
     }
-  });
+  };
+  const url = 'https://quickchart.io/chart?width=600&height=300&c=' + encodeURIComponent(JSON.stringify(config));
+  hourlyImg.src = url;
 }
 
 function render() {
