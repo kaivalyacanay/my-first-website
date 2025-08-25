@@ -6,10 +6,6 @@ const place = params.get('place') || 'Location';
 const titleEl = document.getElementById('title');
 const dailyCanvas = document.getElementById('daily-chart');
 const hourlyCanvas = document.getElementById('hourly-chart');
-
-// Fix chart height so it doesn't grow on load
-dailyCanvas.height = 150;
-hourlyCanvas.height = 150;
 const toggleBtn = document.getElementById('unit-toggle');
 
 let unit = 'C';
@@ -26,6 +22,7 @@ function renderDaily() {
   const maxTemps = d.temperature_2m_max.map(t => unit === 'C' ? t : t * 9 / 5 + 32);
   const minTemps = d.temperature_2m_min.map(t => unit === 'C' ? t : t * 9 / 5 + 32);
   if (dailyChart) dailyChart.destroy();
+  dailyCanvas.height = 150;
   dailyChart = new Chart(dailyCanvas, {
     type: 'line',
     data: {
@@ -65,6 +62,7 @@ function renderHourly() {
     temps.push(unit === 'C' ? t : t * 9 / 5 + 32);
   }
   if (hourlyChart) hourlyChart.destroy();
+  hourlyCanvas.height = 150;
   hourlyChart = new Chart(hourlyCanvas, {
     type: 'line',
     data: {
