@@ -6,6 +6,10 @@ const place = params.get('place') || 'Location';
 const titleEl = document.getElementById('title');
 const dailyCanvas = document.getElementById('daily-chart');
 const hourlyCanvas = document.getElementById('hourly-chart');
+
+// Fix chart height so it doesn't grow on load
+dailyCanvas.height = 150;
+hourlyCanvas.height = 150;
 const toggleBtn = document.getElementById('unit-toggle');
 
 let unit = 'C';
