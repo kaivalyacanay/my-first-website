@@ -19,7 +19,11 @@ function setupWidget() {
   const latDir = lat >= 0 ? 'n' : 's';
   const lonDir = lon >= 0 ? 'e' : 'w';
   const locPath = `${latAbs[0]}d${latAbs[1]}${latDir}${lonAbs[0]}d${lonAbs[1]}${lonDir}`;
-  const slug = place.toLowerCase().replace(/\s+/g, '-');
+  const slug = place
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-');
   dailyWidget.href = `https://forecast7.com/en/${locPath}/${slug}/`;
   dailyWidget.textContent = `${place} Weather`;
   dailyWidget.setAttribute('data-label_1', place);
