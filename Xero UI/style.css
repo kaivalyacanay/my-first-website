@@ -1,0 +1,157 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f5f7fa;
+  margin: 0;
+  padding: 0;
+  color: #222;
+}
+
+.breadcrumb {
+  background: #fff;
+  display: flex;
+  padding: 10px 20px;
+  gap: 20px;
+  border-bottom: 1px solid #ccc;
+  font-size: 14px;
+}
+
+.breadcrumb span {
+  color: #888;
+}
+
+.breadcrumb .current {
+  color: #000;
+  font-weight: bold;
+}
+
+h1 {
+  padding: 20px;
+  margin: 0;
+  font-size: 24px;
+}
+
+.main {
+  display: flex;
+  align-items: flex-start;
+  padding: 0 20px 40px;
+  gap: 20px;
+}
+
+.plans {
+  flex: 1;
+}
+
+.plan-grid {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.plan-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  flex: 1;
+  min-width: 200px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+}
+
+.plan-card h3 {
+  margin-top: 0;
+}
+
+.plan-card .price {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.plan-card .price span {
+  font-size: 14px;
+  font-weight: normal;
+}
+
+.features {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+  flex: 1;
+}
+
+.features li {
+  margin-bottom: 6px;
+}
+
+.features li.available::before {
+  content: "\2713";
+  color: #008000;
+  margin-right: 4px;
+}
+
+.features li.unavailable::before {
+  content: "\2715";
+  color: #cc0000;
+  margin-right: 4px;
+}
+
+.plan-card button {
+  background: #0c62fb;
+  color: #fff;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.plan-card button:hover {
+  background: #084ec1;
+}
+
+.disclaimer {
+  font-size: 12px;
+  color: #555;
+  margin-top: 20px;
+}
+
+.summary {
+  width: 300px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 15px;
+}
+
+.summary h2 {
+  margin-top: 0;
+  font-size: 20px;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid #eee;
+  padding: 8px 0;
+  font-size: 14px;
+}
+
+.summary-item.total {
+  font-weight: bold;
+}
+
+.continue {
+  width: 100%;
+  background: #0c62fb;
+  color: #fff;
+  padding: 10px;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+.continue:hover {
+  background: #084ec1;
+}
