@@ -15,6 +15,9 @@ const demo = urlParams.get("demo") === "1";
 // ----- Storage keys -----
 const RECENTS_KEY = "weather.recents.v1";
 
+// Maximum number of locations to compare
+const MAX_COMPARE = 4;
+
 // ----- Helpers -----
 function setStatus(msg) { statusEl.textContent = msg; }
 function clearStatus() { statusEl.textContent = ""; }
@@ -153,7 +156,7 @@ function renderTable() {
     const row = document.createElement("div"); row.className = "wx-row";
     const cell = document.createElement("div"); cell.className = "wx-cell";
     cell.style.gridColumn = `1 / span ${1 + compare.length}`;
-    cell.textContent = "Add up to 3 locations to compare.";
+    cell.textContent = `Add up to ${MAX_COMPARE} locations to compare.`;
     table.append(row, cell);
     return;
   }
@@ -240,7 +243,10 @@ async function fetchWeather(lat, lon) {
 
 async function addToCompareFlow(loc) {
   try {
-    if (compare.length >= 3) { setStatus("Comparison is full (3). Remove one to add another."); return; }
+    if (compare.length >= MAX_COMPARE) {
+      setStatus(`Comparison is full (${MAX_COMPARE}). Remove one to add another.`);
+      return;
+    }
     setStatus(`Fetching weather for ${placeText(loc)}…`);
     const data = await fetchWeather(loc.latitude, loc.longitude);
     const key = locKey(loc);
@@ -265,7 +271,10 @@ form.addEventListener("submit", async (e) => {
 
 useLocBtn.addEventListener("click", () => {
   if (!navigator.geolocation) { setStatus("Geolocation is not supported by your browser."); return; }
-  if (compare.length >= 3) { setStatus("Comparison is full (3). Remove one to add another."); return; }
+  if (compare.length >= MAX_COMPARE) {
+    setStatus(`Comparison is full (${MAX_COMPARE}). Remove one to add another.`);
+    return;
+  }
   setStatus("Getting your location…");
   navigator.geolocation.getCurrentPosition(async (pos) => {
     try {
