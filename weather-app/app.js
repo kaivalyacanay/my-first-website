@@ -148,6 +148,9 @@ updateRecentUI();
 let suggestAbort;
 cityInput.addEventListener("input", async () => {
   const q = cityInput.value.trim();
+  // If the current text already matches a suggestion, assume the user
+  // selected it and keep the populated option so we can read its metadata
+  if (Array.from(suggestList.options).some(o => o.value === q)) return;
   suggestList.innerHTML = "";
   if (q.length < 2) return;
   try {
@@ -160,6 +163,11 @@ cityInput.addEventListener("input", async () => {
     json.results.forEach(loc => {
       const opt = document.createElement("option");
       opt.value = placeText(loc);
+      opt.dataset.lat = loc.latitude;
+      opt.dataset.lon = loc.longitude;
+      opt.dataset.name = loc.name;
+      if (loc.admin1) opt.dataset.admin1 = loc.admin1;
+      if (loc.country) opt.dataset.country = loc.country;
       suggestList.appendChild(opt);
     });
   } catch (err) {
@@ -281,14 +289,32 @@ async function addToCompareFlow(loc) {
 // ----- Events -----
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
-  const q = cityInput.value.trim(); if (!q) return;
-  setStatus(`Looking up "${q}"…`);
+  const raw = cityInput.value.trim();
+  if (!raw) return;
+  setStatus(`Looking up "${raw}"…`);
   try {
-    const loc = await geocode(q);
-    if (!loc) { setStatus(`No results for "${q}".`); return; }
-    await addToCompareFlow({ name: loc.name, country: loc.country, admin1: loc.admin1 || "", latitude: loc.latitude, longitude: loc.longitude });
+    const opt = Array.from(suggestList.options).find(o => o.value === raw);
+    let loc;
+    if (opt && opt.dataset.lat && opt.dataset.lon) {
+      loc = {
+        name: opt.dataset.name,
+        admin1: opt.dataset.admin1 || "",
+        country: opt.dataset.country || "",
+        latitude: parseFloat(opt.dataset.lat),
+        longitude: parseFloat(opt.dataset.lon)
+      };
+    } else {
+      const g = await geocode(raw);
+      if (!g) { setStatus(`No results for "${raw}".`); return; }
+      loc = { name: g.name, country: g.country, admin1: g.admin1 || "", latitude: g.latitude, longitude: g.longitude };
+    }
+    await addToCompareFlow(loc);
     cityInput.value = "";
-  } catch (err) { console.error(err); setStatus("Something went wrong. Please try again."); }
+    suggestList.innerHTML = "";
+  } catch (err) {
+    console.error(err);
+    setStatus("Something went wrong. Please try again.");
+  }
 });
 
 useLocBtn.addEventListener("click", () => {
