@@ -18,14 +18,14 @@
     <h1>Weather Compare</h1>
 
     <form id="search-form" autocomplete="off">
-      <input id="city-input" type="text" placeholder="Enter a city (e.g., Mumbai)" aria-label="City" list="recent-cities" required />
+      <input id="city-input" type="text" placeholder="Enter a city (e.g., Mumbai)" aria-label="City" list="city-suggestions" required />
       <button type="submit" title="Add to comparison">Add</button>
       <button id="use-location" type="button" title="Use my current location">Use my location</button>
       <button id="clear-all" type="button" title="Remove all compared places">Clear all</button>
     </form>
 
     <div id="recent" class="recent" aria-label="Recent searches"></div>
-    <datalist id="recent-cities"></datalist>
+    <datalist id="city-suggestions"></datalist>
 
     <section id="status" class="status" aria-live="polite"></section>
 

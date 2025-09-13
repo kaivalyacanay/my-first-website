@@ -6,7 +6,7 @@ const useLocBtn = document.getElementById("use-location");
 const clearAllBtn = document.getElementById("clear-all");
 const table = document.getElementById("wx-table");
 const recentWrap = document.getElementById("recent");
-const recentDataList = document.getElementById("recent-cities");
+const suggestList = document.getElementById("city-suggestions");
 
 // ----- Query flags -----
 const urlParams = new URLSearchParams(location.search);
@@ -133,17 +133,39 @@ function addRecent(loc) {
   saveRecents(); updateRecentUI();
 }
 function updateRecentUI() {
-  recentWrap.innerHTML = ""; recentDataList.innerHTML = "";
+  recentWrap.innerHTML = "";
   recents.forEach(loc => {
     const label = placeText(loc);
     const btn = document.createElement("button");
     btn.type = "button"; btn.className = "chip"; btn.textContent = label;
     btn.addEventListener("click", () => addToCompareFlow(loc));
     recentWrap.appendChild(btn);
-    const opt = document.createElement("option"); opt.value = label; recentDataList.appendChild(opt);
   });
 }
 updateRecentUI();
+
+// ----- Suggestions -----
+let suggestAbort;
+cityInput.addEventListener("input", async () => {
+  const q = cityInput.value.trim();
+  suggestList.innerHTML = "";
+  if (q.length < 2) return;
+  try {
+    if (suggestAbort) suggestAbort.abort();
+    suggestAbort = new AbortController();
+    const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=en&format=json`, { signal: suggestAbort.signal });
+    if (!res.ok) return;
+    const json = await res.json();
+    if (!json.results) return;
+    json.results.forEach(loc => {
+      const opt = document.createElement("option");
+      opt.value = placeText(loc);
+      suggestList.appendChild(opt);
+    });
+  } catch (err) {
+    if (err.name !== "AbortError") console.error(err);
+  }
+});
 
 // ----- Compare model -----
 let compare = []; // { key, loc, data }
@@ -211,7 +233,7 @@ function renderTable() {
   addRow("Max today", (e) => `${Math.round(e.data.daily.temperature_2m_max[0])}°C`);
   addRow("Wind now", (e) => `${Math.round(e.data.current_weather.windspeed)} km/h`);
   addRow("Rain today", (e) => `${Math.round((e.data.daily.precipitation_sum[0] || 0) * 10) / 10} mm`);
-  addRow("Local time", (e) => new Date(e.data.current_weather.time).toLocaleString());
+  addRow("Local time", (e) => new Date(e.data.current_weather.time).toLocaleTimeString());
 
 }
 
