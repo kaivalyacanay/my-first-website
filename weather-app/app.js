@@ -146,8 +146,24 @@ updateRecentUI();
 
 // ----- Suggestions -----
 let suggestAbort;
+let selectedLoc = null;
 cityInput.addEventListener("input", async () => {
   const q = cityInput.value.trim();
+
+  // Preserve the currently selected option's coordinates before clearing
+  const match = Array.from(suggestList.options).find(o => o.value === q);
+  if (match && match.dataset.lat && match.dataset.lon) {
+    selectedLoc = {
+      name: match.dataset.name,
+      admin1: match.dataset.admin1 || "",
+      country: match.dataset.country || "",
+      latitude: parseFloat(match.dataset.lat),
+      longitude: parseFloat(match.dataset.lon)
+    };
+  } else {
+    selectedLoc = null;
+  }
+
   suggestList.innerHTML = "";
   if (q.length < 2) return;
   try {
@@ -290,23 +306,28 @@ form.addEventListener("submit", async (e) => {
   if (!raw) return;
   setStatus(`Looking up "${raw}"…`);
   try {
-    const opt = Array.from(suggestList.options).find(o => o.value === raw);
     let loc;
-    if (opt && opt.dataset.lat && opt.dataset.lon) {
-      loc = {
-        name: opt.dataset.name,
-        admin1: opt.dataset.admin1 || "",
-        country: opt.dataset.country || "",
-        latitude: parseFloat(opt.dataset.lat),
-        longitude: parseFloat(opt.dataset.lon)
-      };
+    if (selectedLoc && placeText(selectedLoc) === raw) {
+      loc = selectedLoc;
     } else {
-      const g = await geocode(raw);
-      if (!g) { setStatus(`No results for "${raw}".`); return; }
-      loc = { name: g.name, country: g.country, admin1: g.admin1 || "", latitude: g.latitude, longitude: g.longitude };
+      const opt = Array.from(suggestList.options).find(o => o.value === raw);
+      if (opt && opt.dataset.lat && opt.dataset.lon) {
+        loc = {
+          name: opt.dataset.name,
+          admin1: opt.dataset.admin1 || "",
+          country: opt.dataset.country || "",
+          latitude: parseFloat(opt.dataset.lat),
+          longitude: parseFloat(opt.dataset.lon)
+        };
+      } else {
+        const g = await geocode(raw);
+        if (!g) { setStatus(`No results for "${raw}".`); return; }
+        loc = { name: g.name, country: g.country, admin1: g.admin1 || "", latitude: g.latitude, longitude: g.longitude };
+      }
     }
     await addToCompareFlow(loc);
     cityInput.value = "";
+    selectedLoc = null;
   } catch (err) {
     console.error(err);
     setStatus("Something went wrong. Please try again.");
