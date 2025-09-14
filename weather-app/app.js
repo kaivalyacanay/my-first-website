@@ -310,6 +310,7 @@ form.addEventListener("submit", async (e) => {
     }
     await addToCompareFlow(loc);
     cityInput.value = "";
+    // Clear suggestions so the datalist doesn't retain stale options
     suggestList.innerHTML = "";
   } catch (err) {
     console.error(err);
